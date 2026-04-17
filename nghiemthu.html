@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In Biên Bản Nghiệm Thu - TTYT Hàm Thuận Bắc</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+    <style>
+        :root { --primary: #0056b3; --bg: #e9ecef; --text: #333; }
+        body { font-family: 'Times New Roman', Times, serif; background-color: var(--bg); margin: 0; padding: 20px; color: var(--text); display: flex; gap: 20px; align-items: flex-start; }
+        
+        /* CỘT ĐIỀU KHIỂN BÊN TRÁI */
+        .control-panel {
+            width: 45%; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            position: sticky; top: 20px; height: calc(100vh - 40px); overflow-y: auto; box-sizing: border-box;
+        }
+        .control-panel h3 { color: var(--primary); text-align: center; font-family: Arial, sans-serif; margin-top: 0;}
+        
+        .save-box { background: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin-bottom: 20px; font-family: Arial, sans-serif; }
+        .save-box h4 { margin: 0 0 10px 0; color: #0c5460; }
+        
+        .form-group { margin-bottom: 12px; font-family: Arial, sans-serif; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 13px; color: #555;}
+        .form-group input, .form-group select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        .btn-print { background: #28a745; color: white; border: none; padding: 12px; width: 100%; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 10px; font-size: 16px;}
+        .btn-print:hover { background: #218838; }
+        .btn-excel { background: #1D6F42; color: white; border: none; padding: 10px; width: 100%; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 5px; }
+        .btn-save { background: #0056b3; color: white; border: none; padding: 12px; width: 100%; font-weight: bold; border-radius: 4px; cursor: pointer; font-size: 15px; }
+        .btn-save:hover { background: #004494; }
+
+        /* KHUNG VĂN BẢN A4 BÊN PHẢI */
+        .a4-wrapper { width: 55%; display: flex; justify-content: center; }
+        .a4-container {
+            width: 210mm; min-height: 297mm; background: white; 
+            padding: 20mm 20mm; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            font-size: 13pt; line-height: 1.5; flex-shrink: 0;
+        }
+
+        /* FORMAT CHUẨN VĂN BẢN NHÀ NƯỚC */
+        .header { display: flex; justify-content: space-between; text-align: center; margin-bottom: 20px; }
+        .header .left { font-weight: bold; width: 45%; }
+        .header .right { font-weight: bold; width: 55%; }
+        .header .line { width: 40%; height: 1px; background: black; margin: 5px auto; }
+        .date-text { text-align: right; font-style: italic; margin-right: 50px; margin-bottom: 20px; }
+        
+        .title { text-align: center; font-weight: bold; font-size: 16pt; margin: 20px 0; }
+        
+        .content-section { text-align: justify; }
+        .indent { text-indent: 30px; }
+        .bold { font-weight: bold; }
+        
+        /* BẢNG HÓA ĐƠN CÓ VIỀN */
+        #bangHoaDon { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 12pt; }
+        #bangHoaDon th, #bangHoaDon td { border: 1px solid black; padding: 5px; text-align: center; }
+        #bangHoaDon th { font-weight: bold; }
+        .text-left { text-align: left !important; }
+        .text-right { text-align: right !important; }
+
+        /* BẢNG BỐ CỤC KHÔNG VIỀN */
+        table.layout-table { width: 100%; border-collapse: collapse; margin: 5px 0; }
+        table.layout-table td { border: none; text-align: left; padding: 3px 2px; vertical-align: top;}
+
+        @media print {
+            body { background: white; margin: 0; padding: 0; display: block; }
+            .control-panel { display: none; }
+            .a4-wrapper { width: 100%; display: block; }
+            .a4-container { margin: 0; box-shadow: none; padding: 15mm; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="control-panel">
+    <h3>CÔNG CỤ TẠO BIÊN BẢN NGHIỆM THU</h3>
+    
+    <div class="save-box">
+        <h4>📂 Mở Biên Bản Đã Lưu</h4>
+        <div class="form-group">
+            <select id="selectSavedRecord" onchange="loadRecord()">
+                <option value="">-- Tạo mới biên bản --</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group" style="background:#fff3cd; padding: 10px; border-radius: 5px; border: 1px solid #ffeeba;">
+        <label style="color:#856404;">🏢 Cập nhật thông tin Bên A (Chủ đầu tư):</label>
+        <input type="file" id="fileExcelBenA" accept=".xlsx, .xls">
+        <button class="btn-excel" style="background:#d39e00; color:white; border:none;" onclick="docFileExcelBenA()">Lưu & Cập Nhật Bên A</button>
+        <small style="display:block; margin-top:5px; color:#666;">Hệ thống sẽ ghi nhớ vĩnh viễn. Excel gồm 2 cột: Tiêu chí và Giá trị (Tên, Địa chỉ, SĐT, Email, TK, Nơi Giao Dịch, MST, Mã ĐV, Đại diện, Chức vụ).</small>
+    </div>
+
+    <div class="grid-2">
+        <div class="form-group">
+            <label>Ngày ký biên bản:</label>
+            <input type="date" id="inpNgayKy" onchange="updateDoc()">
+        </div>
+        <div class="form-group">
+            <label>Căn cứ Quyết định số:</label>
+            <input type="text" id="inpSoQD" value="93/QĐ-TTYT ngày 17/4/2025" onkeyup="updateDoc()">
+        </div>
+    </div>
+
+    <div style="border-bottom: 1px dashed #ccc; margin: 15px 0;"></div>
+
+    <div class="form-group">
+        <label style="color:var(--primary);">🔗 Chọn Hợp đồng (Từ App Công Nợ):</label>
+        <select id="selectHopDong" class="search-select" onchange="autoFillContract()">
+            <option value="">-- Nhập tay hoặc chọn HĐ --</option>
+        </select>
+    </div>
+
+    <div class="grid-2">
+        <div class="form-group">
+            <label>Căn cứ Hợp đồng số:</label>
+            <input type="text" id="inpSoHD" onkeyup="updateDoc()">
+        </div>
+        <div class="form-group">
+            <label>Ngày ký hợp đồng:</label>
+            <input type="text" id="inpNgayHD" value="21 tháng 04 năm 2025" onkeyup="updateDoc()">
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label>Số/Ngày Phụ lục HĐ (Để trống nếu ko có):</label>
+        <input type="text" id="inpPhuLuc" placeholder="Ví dụ: 01/PLHĐ ngày 15 tháng 7 năm 2025" onkeyup="updateDoc()">
+    </div>
+
+    <div style="border-bottom: 1px dashed #ccc; margin: 15px 0;"></div>
+    
+    <div class="form-group">
+        <label>Tên nhà thầu (Bên B):</label>
+        <input type="text" id="inpTenBenB" value="CÔNG TY CỔ PHẦN DƯỢC PHẨM TRUNG ƯƠNG CPC1" onkeyup="updateDoc()">
+    </div>
+    <div class="form-group">
+        <label>Địa chỉ Bên B:</label>
+        <input type="text" id="inpDiaChiB" value="87 Nguyễn Văn Trỗi, Phường Phương Liệt, Tp.Hà Nội" onkeyup="updateDoc()">
+    </div>
+    <div class="form-group">
+        <label>Điện thoại & Fax Bên B:</label>
+        <input type="text" id="inpSDTB" value="028 3866 9590 - 3866 3078      Fax: 028 3868 5713" onkeyup="updateDoc()">
+    </div>
+    <div class="form-group">
+        <label>Số tài khoản Bên B:</label>
+        <input type="text" id="inpTKB" value="118002828055 tại Ngân hàng TMCP Công Thương VN – CN Hà Nội" onkeyup="updateDoc()">
+    </div>
+    <div class="form-group">
+        <label>Mã số thuế Bên B:</label>
+        <input type="text" id="inpMSTB" value="0100108536" onkeyup="updateDoc()">
+    </div>
+    <div class="grid-2">
+        <div class="form-group">
+            <label>Đại diện (Ông/Bà):</label>
+            <input type="text" id="inpDaiDienB" value="Nguyễn Huy Thanh" onkeyup="updateDoc()">
+        </div>
+        <div class="form-group">
+            <label>Chức vụ:</label>
+            <input type="text" id="inpChucVuB" value="Phó Tổng giám đốc" onkeyup="updateDoc()">
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Giấy ủy quyền (Để trống nếu ko có):</label>
+        <input type="text" id="inpGUQ" value="Giấy ủy quyền ký hợp đồng số 1731/GUQ-CPC1, ngày 26 tháng 11 năm 2024" placeholder="Nhập giấy ủy quyền nếu có" onkeyup="updateDoc()">
+    </div>
+
+    <div style="border-bottom: 1px dashed #ccc; margin: 15px 0;"></div>
+
+    <div class="form-group" style="background:#e2e3e5; padding: 10px; border-radius: 5px;">
+        <label>Tải Bảng Kê Hóa Đơn (Bên C):</label>
+        <input type="file" id="fileExcel" accept=".xlsx, .xls">
+        <button class="btn-excel" onclick="docFileExcel()">Tải Dữ Liệu Bảng Hóa Đơn</button>
+        <small style="display:block; margin-top:5px; color:#555;">Cột Excel: Số HĐ | Ngày HĐ | Tên hàng | ĐVT | SL | Đơn giá | Thành tiền</small>
+    </div>
+
+    <div class="form-group" style="margin-top: 20px; background: #cce5ff; padding: 15px; border-radius: 5px; border: 1px solid #b8daff;">
+        <label style="color:#004085;">Tên Biên Bản (Để lưu lại):</label>
+        <input type="text" id="inpTenBB" placeholder="Ví dụ: BBNT_CPC1_Thang_4">
+        <button class="btn-save" onclick="saveRecord()">💾 LƯU BIÊN BẢN NÀY</button>
+    </div>
+
+    <button class="btn-print" onclick="window.print()">🖨️ IN BIÊN BẢN (A4)</button>
+</div>
+
+<div class="a4-wrapper">
+<div class="a4-container">
+    <div class="header">
+        <div class="left">
+            <span id="docTenBenA_Title" style="text-transform: uppercase;">TRUNG TÂM Y TẾ KHU VỰC HÀM THUẬN BẮC</span>
+            <div class="line"></div>
+        </div>
+        <div class="right">
+            CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc lập – Tự do – Hạnh phúc
+            <div class="line" style="width: 50%;"></div>
+        </div>
+    </div>
+
+    <div class="date-text">Hàm Thuận, ngày <span id="docNgayKy">..... tháng ..... năm 202...</span></div>
+
+    <div class="title">BIÊN BẢN NGHIỆM THU HÀNG HÓA</div>
+
+    <div class="content-section">
+        <div class="indent">Căn cứ Quyết định số <span id="docSoQD" class="bold">93/QĐ-TTYT ngày 17/4/2025</span> của Trung tâm Y tế Huyện Hàm Thuận Bắc về việc phê duyệt kết quả lựa chọn nhà thầu Gói thầu Mua sắm thuốc dược liệu, thuốc có thành phần dược liệu phối hợp với các dược chất hóa dược, thuốc cổ truyền;</div>
+        
+        <div class="indent">Căn cứ Hợp đồng số: <span id="docSoHD" class="bold">...................</span> ngày <span id="docNgayHD">.............................</span><span id="docPhuLuc"></span> giữa <span id="docTenBenA_CCT" style="text-transform: capitalize;">Trung Tâm Y Tế Khu Vực Hàm Thuận Bắc</span> và <span id="docTenBenB1" class="bold">.........................................</span>;</div>
+        
+        <div class="indent">Hôm nay tại Bên A chúng tôi gồm:</div>
+        
+        <div><span class="bold">Chủ đầu tư (sau đây gọi là Bên A)</span></div>
+        <table class="layout-table">
+            <tr><td style="width:25%;">Tên chủ đầu tư</td><td>: <span class="bold" id="docTenBenA">TRUNG TÂM Y TẾ KHU VỰC HÀM THUẬN BẮC</span></td></tr>
+            <tr><td>Địa chỉ</td><td>: <span id="docDiaChiA">Km 17 Đường 8/4, Thôn Lâm Hòa, xã Hàm Thuận, tỉnh Lâm Đồng</span></td></tr>
+            <tr><td>Điện thoại</td><td>: <span id="docSDTA">0252. 3611812 <span style="margin-left: 40px;">Fax: 0252. 3610675</span></span></td></tr>
+            <tr><td>Email</td><td>: <span id="docEmailA">ytehamthuanbac@gmail.com</span></td></tr>
+            <tr><td>Tài khoản số</td><td>: <span id="docTKA">3716.2.1030529.00000 ; 9527.2.1030529</span></td></tr>
+            <tr><td></td><td>  <span id="docGiaoDichA">giao dịch tại KBNN Khu vực XVI - PGD số 12</span></td></tr>
+            <tr><td>Mã số thuế</td><td>: <span id="docMSTA">3400517197</span></td></tr>
+            <tr><td>Mã ĐVQHNS</td><td>: <span id="docMaDVA">1030529</span></td></tr>
+            <tr><td>Đại diện</td><td>: <span class="bold" id="docDaiDienA">TRẦN GIAO HÙNG</span> <span style="margin-left: 60px;">Chức vụ: <span id="docChucVuA">Giám Đốc</span></span></td></tr>
+        </table>
+
+        <div><span class="bold">Nhà thầu (sau đây gọi là Bên B)</span></div>
+        <table class="layout-table">
+            <tr><td style="width:25%;">Tên nhà thầu</td><td>: <span id="docTenBenB2" class="bold">......................................................</span></td></tr>
+            <tr><td>Địa chỉ</td><td>: <span id="docDiaChiB">......................................................</span></td></tr>
+            <tr><td>Điện thoại</td><td>: <span id="docSDTB">......................................................</span></td></tr>
+            <tr><td>Tài khoản</td><td>: <span id="docTKB">......................................................</span></td></tr>
+            <tr><td>Mã số thuế</td><td>: <span id="docMSTB">......................................................</span></td></tr>
+            <tr><td>Đại diện Ông/Bà</td><td>: <span id="docDaiDienB" class="bold">...................</span> <span style="margin-left: 50px;">Chức vụ: <span id="docChucVuB">...................</span></span></td></tr>
+            <tr id="rowGUQ"><td colspan="2"><span id="docGUQ">......................................................</span></td></tr>
+        </table>
+
+        <div class="indent">Hai bên cùng tiến hành lập biên bản nghiệm thu hàng hóa với những nội dung như sau:</div>
+        
+        <div><span class="bold">Điều 1.</span> Bên B đã bàn giao cho bên A các loại hàng hóa của các hóa đơn đã xuất dưới đây:</div>
+
+        <table id="bangHoaDon">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">STT</th>
+                    <th style="width: 10%;">Số HĐ</th>
+                    <th style="width: 15%;">Ngày Xuất Hóa Đơn</th>
+                    <th style="width: 25%;">Hàng hóa/ Dịch vụ</th>
+                    <th style="width: 8%;">ĐVT</th>
+                    <th style="width: 10%;">Số Lượng</th>
+                    <th style="width: 12%;">Đơn giá</th>
+                    <th style="width: 15%;">Số tiền (Có VAT)</th>
+                </tr>
+            </thead>
+            <tbody id="chiTietHoaDon">
+                <tr><td colspan="8" style="font-style: italic; color: #777;">(Vui lòng tải file Excel để hiển thị danh sách hóa đơn)</td></tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="7" class="text-right bold">Tổng cộng:</td>
+                    <td class="text-right bold" id="tongTienBangSo">0</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="bold">Số tiền bằng chữ: <span id="tongTienBangChu" style="font-style: italic; font-weight: normal;">Không đồng.</span></div>
+
+        <div style="margin-top: 15px;"><span class="bold">Điều 2.</span></div>
+        <div>- Bên B đã hoàn thành việc giao nhận hàng hóa với bên A: Đúng số lượng, chất lượng, chủng loại, quy cách, hàm lượng, hạn dùng, đơn giá, xuất xứ theo hợp đồng đã ký kết.</div>
+        <div>- Biên bản này được lập thành 03 (ba) bản có giá trị pháp lý như nhau, bên A giữ 02 (hai) bản, bên B giữ 01 (một) bản.</div>
+    </div>
+
+    <table class="layout-table" style="margin-top: 30px; text-align: center;">
+        <tr>
+            <td style="width: 50%; text-align: center;">
+                <div class="bold">ĐẠI DIỆN BÊN A</div>
+                <br><br><br><br><br><br>
+                <div class="bold" id="docDaiDienA_Ky" style="text-transform: uppercase;">TRẦN GIAO HÙNG</div>
+            </td>
+            <td style="width: 50%; text-align: center;">
+                <div class="bold">ĐẠI DIỆN BÊN B</div>
+                <div class="bold" id="docChucVuB_Ky" style="text-transform: uppercase;">PHÓ TỔNG GIÁM ĐỐC</div>
+                <br><br><br><br><br>
+                <div class="bold" id="docDaiDienB_Ky" style="text-transform: uppercase;">NGUYỄN HUY THANH</div>
+            </td>
+        </tr>
+    </table>
+</div>
+</div>
+
+<script>
+    let currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+if(!currentUser) window.location.href = "login.html";
+
+// Khi DOM load xong, khóa cứng tên công ty
+$(document).ready(function() {
+    if(currentUser.role === 'user') {
+        document.getElementById('inpTenBenB').value = currentUser.company;
+        document.getElementById('inpTenBenB').disabled = true; // Khóa mỏ lết, cấm sửa!
+        
+        // Chỉ lọc ra hợp đồng của chính nó
+        let options = '<option value="">-- Chọn Hợp đồng của công ty bạn --</option>';
+        congNoDB.hopDongs.forEach(hd => {
+            if(hd.tenCongTy === currentUser.company) {
+                options += `<option value="${hd.id}">${hd.tenCongTy} - HĐ: ${hd.soHopDong}</option>`;
+            }
+        });
+        document.getElementById('selectHopDong').innerHTML = options;
+    }
+});
+    // Database Quản lý Nghiệm thu & Công Nợ
+    let nghiemThuDB = JSON.parse(localStorage.getItem('nghiemThuDB_v1')) || {};
+    let congNoDB = JSON.parse(localStorage.getItem('congNoDB_v2')) || { hopDongs: [] };
+    let currentExcelData = [];
+
+    // DATA Mặc định Bên A (Sẽ bị ghi đè nếu có trong localStorage)
+    let benADefault = {
+        ten: "TRUNG TÂM Y TẾ KHU VỰC HÀM THUẬN BẮC",
+        diaChi: "Km 17 Đường 8/4, Thôn Lâm Hòa, xã Hàm Thuận, tỉnh Lâm Đồng",
+        sdt: "0252. 3611812               Fax: 0252. 3610675",
+        email: "ytehamthuanbac@gmail.com",
+        tk: "3716.2.1030529.00000 ; 9527.2.1030529",
+        giaoDich: "giao dịch tại KBNN Khu vực XVI - PGD số 12",
+        mst: "3400517197",
+        maDV: "1030529",
+        daiDien: "TRẦN GIAO HÙNG",
+        chucVu: "Giám Đốc"
+    };
+
+    // --- KHỞI TẠO DỮ LIỆU ---
+    $(document).ready(function() {
+        $('.search-select').select2();
+        loadDsHopDong();
+        loadDsBienBanDaLuu();
+        renderBenA();
+        updateDoc();
+    });
+
+    // --- XỬ LÝ THÔNG TIN BÊN A ---
+    function renderBenA() {
+        let benA = JSON.parse(localStorage.getItem('thongTinBenA_v1')) || benADefault;
+        
+        document.getElementById('docTenBenA_Title').innerText = benA.ten;
+        document.getElementById('docTenBenA_CCT').innerText = benA.ten.toLowerCase();
+        document.getElementById('docTenBenA').innerText = benA.ten;
+        document.getElementById('docDiaChiA').innerText = benA.diaChi;
+        document.getElementById('docSDTA').innerText = benA.sdt;
+        document.getElementById('docEmailA').innerText = benA.email;
+        document.getElementById('docTKA').innerText = benA.tk;
+        document.getElementById('docGiaoDichA').innerText = benA.giaoDich;
+        document.getElementById('docMSTA').innerText = benA.mst;
+        document.getElementById('docMaDVA').innerText = benA.maDV;
+        document.getElementById('docDaiDienA').innerText = benA.daiDien;
+        document.getElementById('docChucVuA').innerText = benA.chucVu;
+        document.getElementById('docDaiDienA_Ky').innerText = benA.daiDien;
+    }
+
+    function docFileExcelBenA() {
+        let fileInput = document.getElementById('fileExcelBenA');
+        if(!fileInput.files.length) return alert("Vui lòng chọn file Excel thông tin Bên A trước!");
+
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let data = new Uint8Array(e.target.result);
+            let workbook = XLSX.read(data, {type: 'array'});
+            let firstSheet = workbook.SheetNames[0];
+            let rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], {header: 1, raw: true});
+
+            let benA = JSON.parse(localStorage.getItem('thongTinBenA_v1')) || { ...benADefault };
+            
+            // Quét từng dòng, nhận diện từ khóa ở cột 1, lấy giá trị ở cột 2
+            for(let i = 0; i < rows.length; i++) {
+                let row = rows[i];
+                if(!row || !row[0] || row[1] === undefined) continue;
+                
+                let key = row[0].toString().toLowerCase();
+                let val = row[1].toString().trim();
+                
+                if (key.includes('tên')) benA.ten = val;
+                else if (key.includes('địa chỉ')) benA.diaChi = val;
+                else if (key.includes('điện thoại') || key.includes('sđt') || key.includes('fax')) benA.sdt = val;
+                else if (key.includes('email')) benA.email = val;
+                else if (key.includes('tài khoản')) benA.tk = val;
+                else if (key.includes('giao dịch') || key.includes('kbnn')) benA.giaoDich = val;
+                else if (key.includes('thuế') || key.includes('mst')) benA.mst = val;
+                else if (key.includes('đvq') || key.includes('mã đv')) benA.maDV = val;
+                else if (key.includes('đại diện')) benA.daiDien = val;
+                else if (key.includes('chức vụ')) benA.chucVu = val;
+            }
+
+            localStorage.setItem('thongTinBenA_v1', JSON.stringify(benA));
+            renderBenA();
+            alert("Đã ghi nhớ thông tin Bên A mới thành công! Các biên bản sau này sẽ tự động dùng thông tin này.");
+            fileInput.value = "";
+        };
+        reader.readAsArrayBuffer(fileInput.files[0]);
+    }
+
+
+    // --- MÓC NỐI DỮ LIỆU TỪ APP CÔNG NỢ ---
+    function loadDsHopDong() {
+        let html = '<option value="">-- Nhập tay hoặc chọn HĐ --</option>';
+        congNoDB.hopDongs.forEach(hd => {
+            html += `<option value="${hd.id}">${hd.tenCongTy} - HĐ: ${hd.soHopDong}</option>`;
+        });
+        document.getElementById('selectHopDong').innerHTML = html;
+    }
+
+    function autoFillContract() {
+        let idHD = document.getElementById('selectHopDong').value;
+        if(!idHD) return;
+        let hd = congNoDB.hopDongs.find(x => x.id === idHD);
+        if(hd) {
+            document.getElementById('inpTenBenB').value = hd.tenCongTy;
+            document.getElementById('inpSoHD').value = hd.soHopDong;
+            updateDoc();
+        }
+    }
+
+    // --- ĐỒNG BỘ TEXT LÊN BẢN IN ---
+    function updateDoc() {
+        let dateVal = document.getElementById('inpNgayKy').value;
+        if(dateVal) {
+            let d = new Date(dateVal);
+            document.getElementById('docNgayKy').innerText = `${('0' + d.getDate()).slice(-2)} tháng ${('0' + (d.getMonth() + 1)).slice(-2)} năm ${d.getFullYear()}`;
+        } else {
+            document.getElementById('docNgayKy').innerText = "..... tháng ..... năm 202...";
+        }
+
+        document.getElementById('docSoQD').innerText = document.getElementById('inpSoQD').value;
+        document.getElementById('docSoHD').innerText = document.getElementById('inpSoHD').value;
+        document.getElementById('docNgayHD').innerText = document.getElementById('inpNgayHD').value;
+        
+        let pl = document.getElementById('inpPhuLuc').value.trim();
+        document.getElementById('docPhuLuc').innerHTML = pl ? ` và phụ lục hợp đồng số <span class="bold">${pl}</span>` : "";
+        
+        let tenB = document.getElementById('inpTenBenB').value;
+        document.getElementById('docTenBenB1').innerText = tenB;
+        document.getElementById('docTenBenB2').innerText = tenB;
+        document.getElementById('docDiaChiB').innerText = document.getElementById('inpDiaChiB').value;
+        document.getElementById('docSDTB').innerText = document.getElementById('inpSDTB').value;
+        document.getElementById('docTKB').innerText = document.getElementById('inpTKB').value;
+        document.getElementById('docMSTB').innerText = document.getElementById('inpMSTB').value;
+        
+        let guq = document.getElementById('inpGUQ').value.trim();
+        if(guq) {
+            document.getElementById('rowGUQ').style.display = 'table-row';
+            document.getElementById('docGUQ').innerText = guq;
+        } else {
+            document.getElementById('rowGUQ').style.display = 'none';
+        }
+        
+        let daiDien = document.getElementById('inpDaiDienB').value;
+        let chucVu = document.getElementById('inpChucVuB').value;
+        document.getElementById('docDaiDienB').innerText = daiDien;
+        document.getElementById('docDaiDienB_Ky').innerText = daiDien;
+        document.getElementById('docChucVuB').innerText = chucVu;
+        document.getElementById('docChucVuB_Ky').innerText = chucVu;
+    }
+
+    // --- XỬ LÝ LƯU / TẢI BIÊN BẢN ---
+    function loadDsBienBanDaLuu() {
+        let html = '<option value="">-- Tạo mới biên bản --</option>';
+        Object.keys(nghiemThuDB).forEach(key => {
+            html += `<option value="${key}">${key}</option>`;
+        });
+        document.getElementById('selectSavedRecord').innerHTML = html;
+    }
+
+    function saveRecord() {
+        let name = document.getElementById('inpTenBB').value.trim();
+        if(!name) return alert("Vui lòng đặt tên cho Biên Bản ở ô bên trên (Ví dụ: NT_CPC1_Tháng 4) rồi mới bấm Lưu!");
+
+        let record = {
+            name: name,
+            ngayKy: document.getElementById('inpNgayKy').value,
+            soQD: document.getElementById('inpSoQD').value,
+            soHD: document.getElementById('inpSoHD').value,
+            ngayHD: document.getElementById('inpNgayHD').value,
+            phuLuc: document.getElementById('inpPhuLuc').value,
+            tenBenB: document.getElementById('inpTenBenB').value,
+            diaChiB: document.getElementById('inpDiaChiB').value,
+            sdtB: document.getElementById('inpSDTB').value,
+            tkB: document.getElementById('inpTKB').value,
+            mstB: document.getElementById('inpMSTB').value,
+            daiDienB: document.getElementById('inpDaiDienB').value,
+            chucVuB: document.getElementById('inpChucVuB').value,
+            guq: document.getElementById('inpGUQ').value,
+            excelData: currentExcelData
+        };
+
+        nghiemThuDB[name] = record;
+        localStorage.setItem('nghiemThuDB_v1', JSON.stringify(nghiemThuDB));
+        alert("Đã lưu biên bản thành công!");
+        loadDsBienBanDaLuu();
+        document.getElementById('selectSavedRecord').value = name;
+    }
+
+    function loadRecord() {
+        let name = document.getElementById('selectSavedRecord').value;
+        if(!name) {
+            document.querySelectorAll('input[type="text"], input[type="date"]').forEach(el => el.value = '');
+            document.getElementById('inpSoQD').value = "93/QĐ-TTYT ngày 17/4/2025"; 
+            currentExcelData = [];
+            renderTableData();
+            updateDoc();
+            return;
+        }
+
+        let record = nghiemThuDB[name];
+        if(!record) return;
+
+        document.getElementById('inpTenBB').value = record.name;
+        document.getElementById('inpNgayKy').value = record.ngayKy || '';
+        document.getElementById('inpSoQD').value = record.soQD || '';
+        document.getElementById('inpSoHD').value = record.soHD || '';
+        document.getElementById('inpNgayHD').value = record.ngayHD || '';
+        document.getElementById('inpPhuLuc').value = record.phuLuc || '';
+        document.getElementById('inpTenBenB').value = record.tenBenB || '';
+        document.getElementById('inpDiaChiB').value = record.diaChiB || '';
+        document.getElementById('inpSDTB').value = record.sdtB || '';
+        document.getElementById('inpTKB').value = record.tkB || '';
+        document.getElementById('inpMSTB').value = record.mstB || '';
+        document.getElementById('inpDaiDienB').value = record.daiDienB || '';
+        document.getElementById('inpChucVuB').value = record.chucVuB || '';
+        document.getElementById('inpGUQ').value = record.guq || '';
+
+        currentExcelData = record.excelData || [];
+        renderTableData();
+        updateDoc();
+    }
+
+    // --- XỬ LÝ BẢNG EXCEL HÓA ĐƠN VÀ TIỀN ---
+    const formatTien = (tien) => new Intl.NumberFormat('vi-VN').format(tien);
+
+    const mangSo = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+    function docTienBangChu(soTien) {
+        if (soTien === 0) return "Không đồng.";
+        function docBlock3(so) {
+            let tram = Math.floor(so / 100); let chuc = Math.floor((so % 100) / 10); let donvi = so % 10;
+            let kq = "";
+            if (tram > 0) kq += mangSo[tram] + " trăm ";
+            if (chuc > 1) kq += mangSo[chuc] + " mươi ";
+            else if (chuc === 1) kq += "mười ";
+            else if (chuc === 0 && donvi > 0 && tram > 0) kq += "lẻ ";
+            
+            if (donvi === 1 && chuc > 1) kq += "mốt";
+            else if (donvi === 5 && chuc > 0) kq += "lăm";
+            else if (donvi > 0) kq += mangSo[donvi];
+            return kq.trim();
+        }
+
+        let ty = Math.floor(soTien / 1000000000);
+        let trieu = Math.floor((soTien % 1000000000) / 1000000);
+        let ngan = Math.floor((soTien % 1000000) / 1000);
+        let dong = soTien % 1000;
+
+        let str = "";
+        if (ty > 0) str += docBlock3(ty) + " tỷ ";
+        if (trieu > 0) str += docBlock3(trieu) + " triệu ";
+        if (ngan > 0) str += docBlock3(ngan) + " ngàn ";
+        if (dong > 0) str += docBlock3(dong);
+
+        str = str.trim() + " đồng.";
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function parseExcelDate(val) {
+        if(!val) return "";
+        if(typeof val === 'number') {
+            let date = new Date(Math.round((val - 25569) * 86400 * 1000));
+            let y = date.getFullYear(); let m = ('0' + (date.getMonth() + 1)).slice(-2); let d = ('0' + date.getDate()).slice(-2);
+            return `${d}/${m}/${y}`;
+        }
+        return val.toString();
+    }
+
+    function docFileExcel() {
+        let fileInput = document.getElementById('fileExcel');
+        if(!fileInput.files.length) return alert("Vui lòng chọn file Excel Hóa đơn trước!");
+
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let data = new Uint8Array(e.target.result);
+            let workbook = XLSX.read(data, {type: 'array'});
+            let firstSheet = workbook.SheetNames[0];
+            let rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], {header: 1, raw: true});
+
+            currentExcelData = [];
+            let stt = 1;
+
+            for(let i = 1; i < rows.length; i++) {
+                let row = rows[i];
+                if(!row || !row[0]) continue; 
+
+                let soHD = row[0] || "";
+                let ngayHD = parseExcelDate(row[1]);
+                let tenHang = row[2] || "";
+                let dvt = row[3] || "";
+                let sl = Number(row[4]) || 0;
+                let gia = Number(row[5]) || 0;
+                let thanhTien = Number(row[6]) || (sl * gia);
+
+                currentExcelData.push({
+                    stt: stt++, soHD: soHD, ngayHD: ngayHD, 
+                    tenHang: tenHang, dvt: dvt, sl: sl, gia: gia, thanhTien: thanhTien
+                });
+            }
+
+            renderTableData();
+            alert("Đã tải dữ liệu bảng Hóa đơn thành công!");
+            fileInput.value = ""; 
+        };
+        reader.readAsArrayBuffer(fileInput.files[0]);
+    }
+
+    function renderTableData() {
+        let tbody = "";
+        let tongTien = 0;
+
+        currentExcelData.forEach(item => {
+            tongTien += item.thanhTien;
+            tbody += `<tr>
+                <td>${item.stt}</td>
+                <td>${item.soHD}</td>
+                <td>${item.ngayHD}</td>
+                <td class="text-left">${item.tenHang}</td>
+                <td>${item.dvt}</td>
+                <td class="text-right">${formatTien(item.sl)}</td>
+                <td class="text-right">${formatTien(item.gia)}</td>
+                <td class="text-right">${formatTien(item.thanhTien)}</td>
+            </tr>`;
+        });
+
+        if(currentExcelData.length === 0) {
+            tbody = `<tr><td colspan="8" style="font-style: italic; color: #777;">(Vui lòng tải file Excel để hiển thị danh sách hóa đơn)</td></tr>`;
+        }
+
+        document.getElementById('chiTietHoaDon').innerHTML = tbody;
+        document.getElementById('tongTienBangSo').innerText = formatTien(tongTien);
+        document.getElementById('tongTienBangChu').innerText = docTienBangChu(tongTien);
+    }
+</script>
+
+</body>
+</html>

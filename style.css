@@ -1,0 +1,136 @@
+:root { --primary: #0056b3; --bg: #f4f7f6; --white: #fff; --border: #ddd; }
+body { font-family: Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 0; }
+
+.container { 
+    max-width: 1200px; margin: auto; background: var(--white); padding: 20px; 
+    border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; z-index: 1;
+}
+
+h2 { text-align: center; color: var(--primary); text-transform: uppercase;}
+.tabs { display: flex; border-bottom: 2px solid var(--primary); margin-bottom: 20px; }
+.tab-btn { flex: 1; padding: 10px; border: none; background: #e9ecef; cursor: pointer; font-size: 16px; font-weight: bold; }
+.tab-btn.active { background: var(--primary); color: var(--white); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px;}
+.form-group input, .form-group select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 4px; }
+
+.select2-container .select2-selection--single { height: 35px; border: 1px solid var(--border); border-radius: 4px; padding: 3px; }
+.select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 28px; font-size: 14px; }
+.select2-container--default .select2-selection--single .select2-selection__arrow { height: 33px; }
+
+.btn { background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
+.btn:hover { background: #004494; }
+.btn-success { background: #28a745; }
+.btn-warning { background: #ffc107; color: #333; }
+.btn-excel { background: #1D6F42; color: white; width: 100%; padding: 12px; margin-top: 10px; border:none; cursor:pointer;}
+.form-box { border: 1px solid var(--border); padding: 15px; border-radius: 5px; margin-bottom: 20px; background: rgba(250, 250, 250, 0.9); }
+
+table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+th, td { border: 1px solid var(--border); padding: 10px; text-align: left; }
+th { background-color: var(--primary); color: white; }
+.text-right { text-align: right !important; }
+.text-center { text-align: center !important; }
+
+.filter-bar { display: flex; gap: 15px; background: rgba(233, 236, 239, 0.9); padding: 15px; border-radius: 5px; align-items: flex-end; margin-bottom: 15px; }
+.filter-bar .form-group { margin-bottom: 0; flex: 1; }
+
+/* CSS DÀNH RIÊNG CHO TAB NGHIỆM THU */
+.nghiem-thu-layout { display: flex; gap: 20px; align-items: flex-start; }
+.control-panel-nt { width: 40%; background: #f8f9fa; padding: 15px; border: 1px solid var(--border); border-radius: 5px; height: 80vh; overflow-y: auto;}
+.form-group-nt { margin-bottom: 10px; font-family: Arial; }
+.form-group-nt label { display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px; color: #555;}
+.form-group-nt input { width: 100%; padding: 6px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+
+.a4-wrapper-nt { width: 60%; display: flex; justify-content: center; background: #525659; padding: 20px; border-radius: 5px; height: 80vh; overflow-y: auto;}
+.a4-container-nt { width: 210mm; min-height: 297mm; background: white; padding: 20mm; box-sizing: border-box; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5; color: black; }
+
+.header-nt { display: flex; justify-content: space-between; text-align: center; margin-bottom: 20px; }
+.header-nt .left { font-weight: bold; width: 45%; }
+.header-nt .right { font-weight: bold; width: 55%; }
+.header-nt .line { width: 40%; height: 1px; background: black; margin: 5px auto; }
+.date-text-nt { text-align: right; font-style: italic; margin-right: 50px; margin-bottom: 20px; }
+.title-nt { text-align: center; font-weight: bold; font-size: 16pt; margin: 20px 0; }
+.indent-nt { text-indent: 30px; text-align: justify; }
+.bold-nt { font-weight: bold; }
+
+#bangHoaDonNT { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 12pt; }
+#bangHoaDonNT th, #bangHoaDonNT td { border: 1px solid black; padding: 5px; text-align: center; color: black;}
+#bangHoaDonNT th { font-weight: bold; background: white; color: black; }
+
+table.layout-table-nt { width: 100%; border-collapse: collapse; margin: 5px 0; }
+table.layout-table-nt td { border: none; text-align: left; padding: 3px 2px; vertical-align: top; color: black;}
+
+#print-section { display: none; }
+
+/* LOGIC IN ẤN XỊN XÒ */
+@media print {
+    body { background: white; margin: 0; padding: 0; }
+    #main-ui { display: none !important; } 
+    #print-section { display: block !important; position: relative; width: 100%; } 
+    
+    /* Reset khi in báo cáo công nợ */
+    #print-section table th { background-color: #f2f2f2 !important; color: #000 !important; -webkit-print-color-adjust: exact; }
+    
+    /* Reset khi in A4 Nghiệm thu */
+    #print-section .a4-container-nt { margin: 0; padding: 0; box-shadow: none; width: 100%; }
+}
+/* =========================================
+   HIỆU ỨNG SINH ĐỘNG (ANIMATIONS & TRANSITIONS)
+   ========================================= */
+
+/* Hiệu ứng chuyển Tab mượt mà */
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.tab-content.active {
+    animation: fadeSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Hiệu ứng rê chuột vào các dòng của Bảng (Báo cáo & BBNT) */
+tbody tr {
+    transition: all 0.2s ease;
+}
+tbody tr:hover {
+    background-color: #eaf4fe !important; /* Đổi màu xanh nhạt khi rê chuột */
+    transform: scale(1.002);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    z-index: 10;
+    position: relative;
+}
+
+/* Hiệu ứng cho tất cả các Nút bấm */
+.btn {
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+.btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Hiệu ứng bàn tay vẫy chào */
+.wave-hand {
+    display: inline-block;
+    animation: wave-animation 2.5s infinite;
+    transform-origin: 70% 70%;
+}
+@keyframes wave-animation {
+    0% { transform: rotate( 0.0deg) }
+    10% { transform: rotate(14.0deg) }
+    20% { transform: rotate(-8.0deg) }
+    30% { transform: rotate(14.0deg) }
+    40% { transform: rotate(-4.0deg) }
+    50% { transform: rotate(10.0deg) }
+    60% { transform: rotate( 0.0deg) }
+    100% { transform: rotate( 0.0deg) }
+}

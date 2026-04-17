@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Viện Phí & Vật Tư</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div style="background: #0056b3; color: white; padding: 10px 20px; text-align: right; font-weight: bold; font-family: Arial;">
+    <span class="wave-hand" style="font-size: 16px;">👋</span> Xin chào, <span id="currentUserName" style="color: #ffc107;">...</span> |
+    <span id="currentUserRole" style="font-size: 12px; font-weight: normal; margin-right: 15px;"></span>
+    <button onclick="dangXuat()" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold;">Đăng xuất</button>
+</div>
+
+<div class="container" id="main-ui" style="margin-top: 15px;">
+    <h2>Hệ Thống Quản Lý & Đối Chiếu Công Nợ</h2>
+    
+    <div class="tabs">
+        <button class="tab-btn active" id="btn-tab-hop-dong" onclick="switchTab('tab-hop-dong', this)">1. Hợp Đồng</button>
+        <button class="tab-btn" id="btn-tab-hoa-don" onclick="switchTab('tab-hoa-don', this)">2. Hóa Đơn</button>
+        <button class="tab-btn" id="btn-tab-theo-doi" onclick="switchTab('tab-theo-doi', this)">3. Đối Chiếu Công Nợ</button>
+        <button class="tab-btn" id="btn-tab-nghiem-thu" onclick="switchTab('tab-nghiem-thu', this)">4. Biên Bản Nghiệm Thu</button>
+        <button class="tab-btn" id="btn-tab-admin" onclick="switchTab('tab-admin', this)" style="background: #ffc107; color: #000;">5. Quản Trị Hệ Thống</button>
+    </div>
+
+    <div id="tab-hop-dong" class="tab-content active">
+        <div class="grid-2">
+            <div class="form-box">
+                <h3>Khởi tạo Hợp đồng</h3>
+                <div class="form-group"><label>Tên Công ty</label><input type="text" id="tenCongTy" list="listCongTy"><datalist id="listCongTy"></datalist></div>
+                <div class="form-group"><label>Số Hợp đồng</label><input type="text" id="soHopDong"></div>
+                <div class="form-group"><label>Giá trị gốc (VNĐ)</label><input type="number" id="giaTriGoc"></div>
+                <button class="btn" onclick="themHopDong()">Lưu Hợp Đồng</button>
+            </div>
+            <div class="form-box">
+                <h3>Cập nhật Phụ lục</h3>
+                <div class="form-group"><label>Chọn Hợp đồng</label><select id="selectHopDongPL" class="search-select"></select></div>
+                <div class="form-group"><label>Loại điều chỉnh</label><select id="loaiPhuLuc"><option value="tang">Tăng giá trị</option><option value="giam">Giảm giá trị</option></select></div>
+                <div class="form-group"><label>Giá trị thay đổi (VNĐ)</label><input type="number" id="giaTriPhuLuc"></div>
+                <button class="btn" onclick="themPhuLuc()">Lưu Phụ Lục</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-hoa-don" class="tab-content">
+        <div class="grid-2">
+            <div class="form-box">
+                <h3>Nhập Lẻ Hóa Đơn</h3>
+                <div class="form-group"><label>Công ty</label><select id="selectCongTyHD" class="search-select"></select></div>
+                <div class="form-group"><label>Số HĐ</label><input type="text" id="soHoaDonInput"></div>
+                <div class="grid-2">
+                    <div class="form-group"><label>Ngày Hóa đơn</label><input type="date" id="ngayHoaDon"></div>
+                    <div class="form-group"><label>Ngày Nhập kho</label><input type="date" id="ngayNhapKho"></div>
+                </div>
+                <div class="form-group"><label>Số tiền</label><input type="number" id="tienHoaDon"></div>
+                <button class="btn" onclick="themHoaDon()">Lưu</button>
+            </div>
+            <div class="form-box">
+                <h3>Thanh Toán</h3>
+                <div class="form-group"><label>Công ty</label><select id="selectCongTyTT" class="search-select"></select></div>
+                <div class="form-group"><label>Hóa đơn cần xử lý</label><select id="selectHoaDonTT" class="search-select"></select></div>
+                <div class="form-group"><label>Thuộc Hợp đồng</label><select id="selectHopDongTT" class="search-select"></select></div>
+                <div class="grid-2">
+                    <div class="form-group"><label>Tiền thanh toán</label><input type="number" id="tienThanhToan"></div>
+                    <div class="form-group"><label>Ngày TT</label><input type="date" id="ngayThanhToan"></div>
+                </div>
+                <button class="btn" onclick="themThanhToan()">Lưu TT</button>
+            </div>
+        </div>
+        <div class="form-box" style="border-left: 5px solid #1D6F42;"><input type="file" id="fileExcel" accept=".xlsx, .xls" style="width:100%;"><button class="btn btn-excel" onclick="nhapTuExcel()">Tải Hàng Loạt Hóa Đơn (Excel)</button></div>
+    </div>
+
+    <div id="tab-theo-doi" class="tab-content">
+        <div class="filter-bar" id="thanhCongCuLoc">
+            <div class="form-group"><label>Công ty</label><select id="filterCongTy" class="search-select"><option value="ALL">Tất cả</option></select></div>
+            <div class="form-group"><label>Tháng Nhập Kho</label><input type="month" id="filterThangNhap" onchange="renderTable()"></div>
+            <div class="form-group"><label>Nợ đến ngày</label><input type="date" id="filterDate" onchange="renderTable()"></div>
+            <div><button class="btn btn-success" onclick="inBaoCaoTongHop()" style="margin-bottom:5px;width:100%;">Xuất PDF Tổng Hợp</button><button class="btn btn-warning" onclick="inBaoCaoChiTiet()" style="width:100%;">Xuất PDF Chi Tiết</button></div>
+        </div>
+        <table>
+            <thead><tr><th>Công ty</th><th>Số HĐ</th><th>Số Hóa Đơn</th><th>Ngày HĐ</th><th style="background:#1D6F42;">Ngày NK</th><th class="text-right">Số Tiền (VNĐ)</th><th>Ngày TT</th><th>Trạng Thái</th></tr></thead>
+            <tbody id="bangTheoDoi"></tbody><tfoot id="bangTheoDoiFoot" style="background:#e9ecef;"></tfoot>
+        </table>
+    </div>
+
+    <div id="tab-nghiem-thu" class="tab-content">
+        <div class="nghiem-thu-layout">
+            <div class="control-panel-nt">
+                
+                <div class="save-box-nt" id="khuVucQuanLyBBNT" style="background:#d1ecf1; padding:10px; border-radius:5px; margin-bottom:15px;">
+                    <h4 style="margin:0 0 10px; color:#0c5460;">📂 Danh Sách Biên Bản Nghiệm Thu</h4>
+                    <div style="max-height: 200px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #bee5eb; background: white;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px; font-family: Arial;">
+                            <thead style="background: #17a2b8; color: white; position: sticky; top: 0; z-index: 2;">
+                                <tr>
+                                    <th style="padding: 5px; border: 1px solid #bee5eb;">Số BBNT / Tên</th>
+                                    <th style="padding: 5px; border: 1px solid #bee5eb;">Đối tác / HĐ</th>
+                                    <th style="padding: 5px; border: 1px solid #bee5eb;">Tổng tiền</th>
+                                    <th style="padding: 5px; border: 1px solid #bee5eb; width: 135px; text-align: center;">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dsBBNTBody">
+                                </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-warning" style="width: 100%; font-size: 13px; padding: 6px; font-weight: bold;" onclick="lamMoiFormNT()">+ TẠO BIÊN BẢN MỚI TỪ ĐẦU</button>
+                </div>
+
+                <div class="form-group-nt" id="khuVucCapNhatBenA" style="background:#fff3cd; padding:10px; border-radius:5px; margin-bottom:15px; display:none;">
+                    <label>🏢 Cập nhật Bên A (Admin mới thấy):</label>
+                    <input type="file" id="fileExcelBenA" accept=".xlsx, .xls">
+                    <button class="btn-excel" style="background:#d39e00;margin-top:5px;" onclick="docFileExcelBenA()">Lưu Bên A</button>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group-nt"><label>Ngày ký:</label><input type="date" id="inpNgayKyNT" onchange="updateDocNT()"></div>
+                    <div class="form-group-nt"><label>Số BBNT:</label><input type="text" id="inpSoBBNT" placeholder="VD: 01/BBNT" onkeyup="updateDocNT()"></div>
+                </div>
+
+                <div class="form-group-nt" style="background: #fdfdfe; padding: 10px; border: 1px dashed #ccc; border-radius: 4px; margin-bottom: 10px;">
+                    <label style="color:#0056b3;">📜 Quyết định trúng thầu:</label>
+                    <div class="form-group-nt"><label>Số QĐ:</label><input type="text" id="inpSoQDNT" value="93/QĐ-TTYT ngày 17/4/2025" onkeyup="updateDocNT()"></div>
+                    <div class="form-group-nt"><label>Đơn vị ban hành QĐ:</label><input type="text" id="inpDonViQDNT" value="Trung tâm Y tế Huyện Hàm Thuận Bắc" onkeyup="updateDocNT()"></div>
+                    <div class="form-group-nt">
+                        <label>Nội dung trích yếu của QĐ:</label>
+                        <textarea id="inpNoiDungQDNT" rows="3" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; font-family:Arial; box-sizing: border-box;" onkeyup="updateDocNT()">về việc phê duyệt kết quả lựa chọn nhà thầu Gói thầu Mua sắm thuốc dược liệu, thuốc có thành phần dược liệu phối hợp với các dược chất hóa dược, thuốc cổ truyền</textarea>
+                    </div>
+                </div>
+
+                <div class="form-group-nt" style="margin-top:10px;">
+                    <label style="color:#0056b3;">🔗 Liên kết Hợp đồng:</label>
+                    <select id="selectHopDongNT" class="search-select" style="width:100%" onchange="autoFillContractNT()"></select>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+                    <div class="form-group-nt"><label>Số Hợp đồng:</label><input type="text" id="inpSoHDNT" onkeyup="updateDocNT()"></div>
+                    <div class="form-group-nt"><label>Ngày ký HĐ:</label><input type="text" id="inpNgayHDNT" value="21/04/2025" onkeyup="updateDocNT()"></div>
+                </div>
+                <div class="form-group-nt" style="margin-top:10px;"><label>Phụ lục (Để trống nếu ko có):</label><input type="text" id="inpPhuLucNT" placeholder="VD: 01/PLHĐ ngày..." onkeyup="updateDocNT()"></div>
+
+                <h4 style="margin:15px 0 5px; color:#0056b3;">Thông tin Bên B</h4>
+                <div class="form-group-nt"><input type="text" id="inpTenBenBNT" placeholder="Tên Công ty" onkeyup="updateDocNT()"></div>
+                <div class="form-group-nt"><input type="text" id="inpDiaChiBNT" placeholder="Địa chỉ" onkeyup="updateDocNT()"></div>
+                <div class="form-group-nt"><input type="text" id="inpSDTBNT" placeholder="SĐT / Fax" onkeyup="updateDocNT()"></div>
+                <div class="form-group-nt"><input type="text" id="inpTKBNT" placeholder="Tài khoản ngân hàng" onkeyup="updateDocNT()"></div>
+                <div class="form-group-nt"><input type="text" id="inpMSTBNT" placeholder="Mã số thuế" onkeyup="updateDocNT()"></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group-nt"><input type="text" id="inpDaiDienBNT" placeholder="Đại diện (Ông/Bà)" onkeyup="updateDocNT()"></div>
+                    <div class="form-group-nt"><input type="text" id="inpChucVuBNT" placeholder="Chức vụ" onkeyup="updateDocNT()"></div>
+                </div>
+                <div class="form-group-nt" style="margin-top:10px;"><input type="text" id="inpGUQNT" placeholder="Giấy ủy quyền (Nếu có)" onkeyup="updateDocNT()"></div>
+
+                <div class="form-group-nt" style="background:#e2e3e5; padding:10px; border-radius:5px; margin-top:15px;">
+                    <label>Tải Bảng Kê Hóa Đơn Excel:</label>
+                    <input type="file" id="fileExcelNT" accept=".xlsx, .xls">
+                    <button class="btn-excel" style="margin-top:5px;" onclick="docFileExcelNT()">Đổ Dữ Liệu Vào Bảng</button>
+                </div>
+
+                <div class="form-group-nt" style="margin-top: 15px; background: #cce5ff; padding: 15px; border-radius: 5px;">
+                    <label>Tên Biên Bản để Lưu (Bắt buộc):</label>
+                    <input type="text" id="inpTenBBNT" placeholder="VD: BBNT_CPC1_Thang4">
+                    <button class="btn" style="width:100%; margin-top:10px;" onclick="saveRecordNT()">💾 LƯU BIÊN BẢN NÀY</button>
+                </div>
+                <button class="btn btn-success" style="width:100%; margin-top:10px; font-size:16px;" onclick="inBienBanNghiemThu()">🖨️ IN BIÊN BẢN (A4)</button>
+            </div>
+
+            <div class="a4-wrapper-nt">
+                <div class="a4-container-nt" id="ban-in-nghiem-thu">
+                    <div class="header-nt">
+                        <div class="left"><span id="docTenBenA_TitleNT" style="text-transform:uppercase;">TTYT HTB</span><div class="line"></div></div>
+                        <div class="right">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc lập – Tự do – Hạnh phúc<div class="line" style="width:50%;"></div></div>
+                    </div>
+                    <div class="date-text-nt">Hàm Thuận, ngày <span id="docNgayKyNT">..... tháng ..... năm 202...</span></div>
+                    
+                    <div class="title-nt" style="margin-bottom: 5px;">BIÊN BẢN NGHIỆM THU HÀNG HÓA</div>
+                    <div style="text-align: center; margin-bottom: 20px; font-style: italic;">Số: <span id="docSoBBNT" class="bold-nt">.......</span></div>
+
+                    <div class="content-section-nt">
+                        <div class="indent-nt">Căn cứ Quyết định số <span id="docSoQDNT" class="bold-nt">...........</span> của <span id="docDonViQDNT">.........................</span> <span id="docNoiDungQDNT">..................................................................</span>;</div>
+                        <div class="indent-nt">Căn cứ Hợp đồng số: <span id="docSoHDNT" class="bold-nt">.......</span> ngày <span id="docNgayHDNT">.......</span><span id="docPhuLucNT"></span> giữa <span id="docTenBenA_CCTNT">TTYT HTB</span> và <span id="docTenBenB1NT" class="bold-nt">.......</span>;</div>
+                        <div class="indent-nt">Hôm nay tại Bên A chúng tôi gồm:</div>
+                        
+                        <div><span class="bold-nt">Chủ đầu tư (sau đây gọi là Bên A)</span></div>
+                        <table class="layout-table-nt">
+                            <tr><td style="width:25%;">Tên chủ đầu tư</td><td>: <span class="bold-nt" id="docTenBenANT">TTYT HTB</span></td></tr>
+                            <tr><td>Địa chỉ</td><td>: <span id="docDiaChiANT">...</span></td></tr>
+                            <tr><td>Điện thoại</td><td>: <span id="docSDTANT">...</span></td></tr>
+                            <tr><td>Email</td><td>: <span id="docEmailANT">...</span></td></tr>
+                            <tr><td>Tài khoản số</td><td>: <span id="docTKANT">...</span></td></tr>
+                            <tr><td></td><td>  <span id="docGiaoDichANT">...</span></td></tr>
+                            <tr><td>Mã số thuế</td><td>: <span id="docMSTANT">...</span></td></tr>
+                            <tr><td>Mã ĐVQHNS</td><td>: <span id="docMaDVANT">...</span></td></tr>
+                            <tr><td>Đại diện</td><td>: <span class="bold-nt" id="docDaiDienANT">...</span> <span style="margin-left:60px;">Chức vụ: <span id="docChucVuANT">...</span></span></td></tr>
+                        </table>
+
+                        <div><span class="bold-nt">Nhà thầu (sau đây gọi là Bên B)</span></div>
+                        <table class="layout-table-nt">
+                            <tr><td style="width:25%;">Tên nhà thầu</td><td>: <span id="docTenBenB2NT" class="bold-nt">.......</span></td></tr>
+                            <tr><td>Địa chỉ</td><td>: <span id="docDiaChiBNT">.......</span></td></tr>
+                            <tr><td>Điện thoại</td><td>: <span id="docSDTBNT">.......</span></td></tr>
+                            <tr><td>Tài khoản</td><td>: <span id="docTKBNT">.......</span></td></tr>
+                            <tr><td>Mã số thuế</td><td>: <span id="docMSTBNT">.......</span></td></tr>
+                            <tr><td>Đại diện Ông/Bà</td><td>: <span id="docDaiDienBNT" class="bold-nt">.......</span> <span style="margin-left:50px;">Chức vụ: <span id="docChucVuBNT">.......</span></span></td></tr>
+                            <tr id="rowGUQNT"><td colspan="2"><span id="docGUQNT">.......</span></td></tr>
+                        </table>
+
+                        <div class="indent-nt">Hai bên cùng tiến hành lập biên bản nghiệm thu hàng hóa với những nội dung như sau:</div>
+                        <div><span class="bold-nt">Điều 1.</span> Bên B đã bàn giao cho bên A các loại hàng hóa của các hóa đơn đã xuất dưới đây:</div>
+
+                        <table id="bangHoaDonNT">
+                            <thead><tr><th style="width:5%;">STT</th><th style="width:10%;">Số HĐ</th><th style="width:15%;">Ngày HĐ</th><th style="width:25%;">Hàng hóa</th><th style="width:8%;">ĐVT</th><th style="width:10%;">SL</th><th style="width:12%;">Đơn giá</th><th style="width:15%;">Thành tiền</th></tr></thead>
+                            <tbody id="chiTietHoaDonNT"><tr><td colspan="8" style="text-align:center; font-style:italic;">(Chưa có dữ liệu)</td></tr></tbody>
+                            <tfoot><tr><td colspan="7" class="text-right bold-nt">Tổng cộng:</td><td class="text-right bold-nt" id="tongTienBangSoNT">0</td></tr></tfoot>
+                        </table>
+
+                        <div class="bold-nt">Số tiền bằng chữ: <span id="tongTienBangChuNT" style="font-style:italic; font-weight:normal;">Không đồng.</span></div>
+                        <div style="margin-top:15px;"><span class="bold-nt">Điều 2.</span></div>
+                        <div>- Bên B đã hoàn thành việc giao nhận hàng hóa với bên A: Đúng số lượng, chất lượng, chủng loại, quy cách, hàm lượng, hạn dùng, đơn giá, xuất xứ theo hợp đồng đã ký kết.</div>
+                        <div>- Biên bản này được lập thành 03 (ba) bản có giá trị pháp lý như nhau, bên A giữ 02 (hai) bản, bên B giữ 01 (một) bản.</div>
+                    </div>
+                    
+                    <table class="layout-table-nt" style="margin-top:30px; text-align:center;">
+                        <tr>
+                            <td style="width:50%; text-align:center;">
+                                <div class="bold-nt">ĐẠI DIỆN BÊN A</div><br><br><br><br><br>
+                                <div class="bold-nt" id="docDaiDienA_KyNT" style="text-transform:uppercase;">...</div>
+                            </td>
+                            <td style="width:50%; text-align:center;">
+                                <div class="bold-nt">ĐẠI DIỆN BÊN B</div>
+                                <div class="bold-nt" id="docChucVuB_KyNT" style="text-transform:uppercase;">...</div><br><br><br><br><br>
+                                <div class="bold-nt" id="docDaiDienB_KyNT" style="text-transform:uppercase;">...</div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-admin" class="tab-content">
+        <div class="grid-2">
+            <div class="form-box" style="border-left: 4px solid #ffc107;">
+                <h3>Cấp Tài Khoản Mới</h3>
+                <div class="form-group"><label>Tên đăng nhập (Viết liền không dấu)</label><input type="text" id="newUsername"></div>
+                <div class="form-group"><label>Mật khẩu</label><input type="text" id="newPassword"></div>
+                <div class="form-group">
+                    <label>Quyền hạn</label>
+                    <select id="newRole" onchange="toggleCompanySelect()"><option value="user">Tài khoản con (Đối tác)</option><option value="admin">Quản trị viên (Kế toán TTYT)</option></select>
+                </div>
+                <div class="form-group" id="divSelectCompany">
+                    <label>Gắn với Công ty (Để giới hạn dữ liệu hiển thị)</label>
+                    <select id="newUserCompany" class="search-select" style="width:100%"></select>
+                </div>
+                <button class="btn btn-success" onclick="taoTaiKhoan()">Lưu Tài Khoản</button>
+            </div>
+            <div class="form-box">
+                <h3>Danh sách Tài khoản</h3>
+                <table style="font-size: 13px;">
+                    <thead><tr><th>Tài khoản</th><th>Quyền</th><th>Công ty quản lý</th><th>Thao tác</th></tr></thead>
+                    <tbody id="bangTaiKhoan"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div style="text-align: center; margin-top: 20px; margin-bottom: 20px; font-size: 13px; color: #6c757d; font-family: Arial, sans-serif;">
+    <strong style="color: #495057;">Bản quyền © 2026 - Designed & Coded by Đặng Ngọc Văn</strong>
+</div>
+</div>
+
+<div id="print-section"></div>
+<script src="script.js"></script>
+</body>
+</html>
