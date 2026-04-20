@@ -269,12 +269,19 @@ function renderTable() {
     let filterDate = document.getElementById('filterDate').value; 
     let fHoaDons = db.hoaDons, fThanhToans = db.thanhToans;
 
-    if(filterThangNhap) fHoaDons = fHoaDons.filter(hd => hd.ngayNhapKho && hd.ngayNhapKho.startsWith(filterThangNhap));
-    if(filterDate) { fHoaDons = fHoaDons.filter(hd => hd.ngayHoaDon <= filterDate); fThanhToans = fThanhToans.filter(tt => tt.ngay <= filterDate); }
+    // --- BƯỚC PHÂN QUYỀN TRỌNG YẾU ---
+    let filteredHoaDons = [];
+    if(currentUser.role === 'user') {
+        // Nếu là User: CHỈ lấy đúng công ty của mình, tuyệt đối không lấy thêm
+        filteredHoaDons = fHoaDons.filter(hd => hd.tenCongTy === currentUser.company);
+    } else {
+        // Nếu là Admin: Lấy theo bộ lọc hoặc lấy tất cả
+        filteredHoaDons = (locCongTy !== 'ALL') ? fHoaDons.filter(hd => hd.tenCongTy === locCongTy) : fHoaDons;
+    }
 
-    let filteredHoaDons = fHoaDons;
-    if(currentUser.role === 'user') filteredHoaDons = fHoaDons.filter(hd => hd.tenCongTy === currentUser.company);
-    else if (locCongTy !== 'ALL') filteredHoaDons = fHoaDons.filter(hd => hd.tenCongTy === locCongTy);
+    // Lọc tiếp theo ngày tháng nếu có chọn
+    if(filterThangNhap) filteredHoaDons = filteredHoaDons.filter(hd => hd.ngayNhapKho && hd.ngayNhapKho.startsWith(filterThangNhap));
+    if(filterDate) filteredHoaDons = filteredHoaDons.filter(hd => hd.ngayHoaDon <= filterDate);
 
     let groupedByCty = {};
     filteredHoaDons.forEach(hoaDon => {
@@ -283,24 +290,24 @@ function renderTable() {
         groupedByCty[normName].invoices.push(hoaDon);
     });
 
-    let html = '', tongTatCaNhapKho = 0, tongTatCaNo = 0; 
+    let html = '', tongTatCaNo = 0; 
     Object.keys(groupedByCty).sort().forEach(key => {
         let ctyGroup = groupedByCty[key];
         ctyGroup.invoices.forEach(hoaDon => {
-            // Lấy số HĐ từ ô nhập tay (idHD_Text) hoặc từ HĐ đã gán
             let hopDong = db.hopDongs.find(hd => hd.id === hoaDon.idHD);
             let valSoHD = hoaDon.idHD_Text || (hopDong ? hopDong.soHopDong : '');
             
-            // Render ô nhập liệu
-            let oNhapSoHD = `
-                <div style="display:flex; gap:5px; align-items:center;">
+            let oNhapSoHD = `<div style="display:flex; gap:5px; align-items:center;">
                     <input type="text" id="soHD_input_${hoaDon.id}" value="${valSoHD}" placeholder="Nhập số..." style="width:110px; padding:4px; border:1px solid #ccc; border-radius:4px;">
                     <button onclick="luuNhanhSoHD('${hoaDon.id}')" style="background:#28a745; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Lưu</button>
                 </div>`;
-
+            
             let gdThanhToan = fThanhToans.filter(tt => tt.idHoaDon === hoaDon.id), daThanhToan = gdThanhToan.length > 0;
-            tongTatCaNhapKho += hoaDon.soTien; 
-            if (!daThanhToan) { ctyGroup.totalNo += hoaDon.soTien; tongTatCaNo += hoaDon.soTien; }
+            
+            if (!daThanhToan) { 
+                ctyGroup.totalNo += hoaDon.soTien; 
+                tongTatCaNo += hoaDon.soTien; 
+            }
             
             html += `<tr>
                 <td><strong>${ctyGroup.displayName}</strong></td>
@@ -313,16 +320,181 @@ function renderTable() {
                 <td class="text-center">${daThanhToan ? 'Đã TT' : 'Chưa TT'}</td>
             </tr>`;
         });
-        if (ctyGroup.totalNo > 0 || locCongTy !== 'ALL') html += `<tr style="background:#f4f8fb;"><td colspan="5" class="text-right bold" style="color:#0056b3;">Tổng nợ ${ctyGroup.displayName}:</td><td class="text-right text-danger bold">${formatTien(ctyGroup.totalNo)}</td><td colspan="2"></td></tr>`;
+        
+        // Dòng tổng cộng nợ của từng công ty
+        if (ctyGroup.totalNo > 0) {
+            html += `<tr style="background:#f4f8fb;"><td colspan="5" class="text-right bold" style="color:#0056b3;">Tổng nợ ${ctyGroup.displayName}:</td><td class="text-right text-danger bold">${formatTien(ctyGroup.totalNo)}</td><td colspan="2"></td></tr>`;
+        }
     });
     
     if(filteredHoaDons.length === 0) html = `<tr><td colspan="8" class="text-center">Chưa có dữ liệu</td></tr>`;
     document.getElementById('bangTheoDoi').innerHTML = html;
+    
+    // Tổng nợ cuối bảng giờ đây đã an toàn: 
+    // - Với Admin: Tổng nợ toàn viện (hoặc theo lọc)
+    // - Với User: CHỈ là tổng nợ của chính họ
     document.getElementById('bangTheoDoiFoot').innerHTML = `<tr><td colspan="5" class="text-right bold" style="font-size:15px; color:#1D6F42;">TỔNG NỢ CÒN LẠI:</td><td class="text-right text-danger bold" style="font-size:16px;">${formatTien(tongTatCaNo)}</td><td colspan="2"></td></tr>`;
 }
 
-function inBaoCaoTongHop() { alert("Chức năng in báo cáo công nợ."); }
-function inBaoCaoChiTiet() { alert("Chức năng in báo cáo chi tiết."); }
+function inBaoCaoTongHop() {
+    let grouped = {};
+    let tongTatCaNo = 0;
+    let rows = '';
+
+    // Phân quyền dữ liệu
+    let filteredData = (currentUser.role === 'user') 
+        ? db.hoaDons.filter(hd => hd.tenCongTy === currentUser.company)
+        : db.hoaDons;
+
+    if (filteredData.length === 0) return alert("Không có dữ liệu để in!");
+
+    filteredData.forEach(hd => {
+        let cty = hd.tenCongTy || 'Không rõ';
+        if (!grouped[cty]) grouped[cty] = [];
+        grouped[cty].push(hd);
+    });
+
+    Object.keys(grouped).sort().forEach(cty => {
+        let list = grouped[cty];
+        // Sắp xếp theo ngày hóa đơn
+        list.sort((a, b) => (a.ngayHoaDon || '').localeCompare(b.ngayHoaDon || ''));
+
+        let tongNoCty = 0;
+        rows += `<tr style="background:#f2f2f2; font-weight:bold;"><td colspan="6">${cty}</td></tr>`;
+
+        list.forEach(hd => {
+            let daTT = db.thanhToans.some(tt => tt.idHoaDon === hd.id);
+            let conNo = daTT ? 0 : hd.soTien;
+            if (!daTT) {
+                tongNoCty += hd.soTien;
+                tongTatCaNo += hd.soTien;
+            }
+            rows += `
+                <tr>
+                    <td style="text-align:center"> - </td>
+                    <td style="text-align:center">${hd.soHoaDon}</td>
+                    <td style="text-align:center">${formatDate(hd.ngayHoaDon)}</td>
+                    <td style="text-align:right">${formatTien(hd.soTien)}</td>
+                    <td style="text-align:center">${daTT ? 'Đã TT' : 'Chưa TT'}</td>
+                    <td style="text-align:right">${formatTien(conNo)}</td>
+                </tr>`;
+        });
+
+        rows += `
+            <tr style="font-weight:bold;">
+                <td colspan="5" style="text-align:right">Cộng tổng nợ ${cty}:</td>
+                <td style="text-align:right; color:red;">${formatTien(tongNoCty)}</td>
+            </tr>`;
+    });
+
+    // Tạo nội dung in
+    let htmlIn = `
+        <style>
+            table { width: 100%; border-collapse: collapse; font-family: "Times New Roman", serif; }
+            th, td { border: 1px solid black; padding: 8px; font-size: 13px; }
+            th { background: #eee; }
+        </style>
+        <div style="padding:20px;">
+            <h2 style="text-align:center;">BÁO CÁO CÔNG NỢ TỔNG HỢP</h2>
+            <p style="text-align:right; font-style:italic;">Ngày in: ${new Date().toLocaleDateString('vi-VN')}</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Công ty</th><th>Số HĐơn</th><th>Ngày HĐ</th><th>Số tiền</th><th>Trạng thái</th><th>Còn nợ</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot>
+                    <tr style="background:#eee; font-weight:bold; font-size:15px;">
+                        <td colspan="5" style="text-align:right">TỔNG CỘNG NỢ PHẢI TRẢ:</td>
+                        <td style="text-align:right; color:red;">${formatTien(tongTatCaNo)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>`;
+
+    document.getElementById('print-section').innerHTML = htmlIn;
+    window.print();
+}
+function inBaoCaoChiTiet() {
+    let selectedCty = document.getElementById('filterCongTy')?.value || 'ALL';
+    let grouped = {};
+    let tongTatCaNo = 0;
+
+    let dataToProcess = (currentUser.role === 'user') 
+        ? db.hoaDons.filter(hd => hd.tenCongTy === currentUser.company)
+        : (selectedCty !== 'ALL' ? db.hoaDons.filter(hd => hd.tenCongTy === selectedCty) : db.hoaDons);
+
+    if (dataToProcess.length === 0) return alert("Không có dữ liệu chi tiết!");
+
+    dataToProcess.forEach(hd => {
+        let cty = hd.tenCongTy || 'Không rõ';
+        let hopDong = db.hopDongs.find(h => h.id === hd.idHD);
+        let soHD = hd.idHD_Text || (hopDong ? hopDong.soHopDong : 'Chưa rõ');
+
+        if (!grouped[cty]) grouped[cty] = {};
+        if (!grouped[cty][soHD]) grouped[cty][soHD] = [];
+        grouped[cty][soHD].push(hd);
+    });
+
+    let rows = '';
+    Object.keys(grouped).sort().forEach(cty => {
+        rows += `<tr style="background:#cce5ff; font-weight:bold;"><td colspan="7">${cty}</td></tr>`;
+        let contracts = grouped[cty];
+
+        Object.keys(contracts).forEach(soHD => {
+            rows += `<tr style="font-weight:bold; font-style:italic;"><td colspan="7" style="padding-left:20px;">Hợp đồng: ${soHD}</td></tr>`;
+            let list = contracts[soHD];
+            list.sort((a, b) => (a.ngayHoaDon || '').localeCompare(b.ngayHoaDon || ''));
+
+            let tongHD = 0;
+            list.forEach(hd => {
+                let daTT = db.thanhToans.some(tt => tt.idHoaDon === hd.id);
+                let conNo = daTT ? 0 : hd.soTien;
+                if(!daTT) { tongHD += hd.soTien; tongTatCaNo += hd.soTien; }
+
+                rows += `
+                    <tr>
+                        <td></td><td></td>
+                        <td style="text-align:center">${hd.soHoaDon}</td>
+                        <td style="text-align:center">${formatDate(hd.ngayHoaDon)}</td>
+                        <td style="text-align:right">${formatTien(hd.soTien)}</td>
+                        <td style="text-align:center">${daTT ? 'Đã TT' : 'Chưa TT'}</td>
+                        <td style="text-align:right">${formatTien(conNo)}</td>
+                    </tr>`;
+            });
+            rows += `<tr style="font-weight:bold;"><td colspan="6" style="text-align:right">Tổng nợ HĐ ${soHD}:</td><td style="text-align:right">${formatTien(tongHD)}</td></tr>`;
+        });
+    });
+
+    let htmlIn = `
+        <style>
+            table { width: 100%; border-collapse: collapse; font-family: "Times New Roman", serif; }
+            th, td { border: 1px solid black; padding: 6px; font-size: 12px; }
+            th { background: #eee; }
+        </style>
+        <div style="padding:20px;">
+            <h2 style="text-align:center;">BÁO CÁO CHI TIẾT CÔNG NỢ THEO HỢP ĐỒNG</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="2">Đơn vị / Hợp đồng</th>
+                        <th>Số HĐơn</th><th>Ngày HĐ</th><th>Số tiền</th><th>Trạng thái</th><th>Còn nợ</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot>
+                    <tr style="background:#eee; font-weight:bold;">
+                        <td colspan="6" style="text-align:right">TỔNG NỢ PHẢI TRẢ:</td>
+                        <td style="text-align:right; color:red;">${formatTien(tongTatCaNo)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>`;
+
+    document.getElementById('print-section').innerHTML = htmlIn;
+    window.print();
+}
 
 // ==========================================
 // 4. LOGIC BIÊN BẢN NGHIỆM THU (TAB 4)
