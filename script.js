@@ -1,18 +1,74 @@
 // ==========================================
-// 1. HỆ THỐNG BẢO MẬT & PHÂN QUYỀN (RBAC)
+// 1. KẾT NỐI FIREBASE & CHUẨN HÓA DỮ LIỆU (CHỐNG ĐỨT ĐOẠN)
 // ==========================================
 let currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
 if(!currentUser && window.location.pathname.indexOf('login.html') === -1) {
     window.location.href = "login.html";
 }
 
+let usersDB = {};
+let db = { hopDongs: [], phuLucs: [], hoaDons: [], thanhToans: [] };
+let nghiemThuDB = {};
+let currentExcelDataNT = [];
+
+let benADefault = {
+    ten: "TRUNG TÂM Y TẾ KHU VỰC HÀM THUẬN BẮC", diaChi: "Km 17 Đường 8/4, Thôn Lâm Hòa, xã Hàm Thuận, tỉnh Lâm Đồng",
+    sdt: "0252. 3611812              Fax: 0252. 3610675", email: "ytehamthuanbac@gmail.com",
+    tk: "3716.2.1030529.00000 ; 9527.2.1030529", giaoDich: "giao dịch tại KBNN Khu vực XVI - PGD số 12",
+    mst: "3400517197", maDV: "1030529", daiDien: "TRẦN GIAO HÙNG", chucVu: "Giám Đốc"
+};
+let benA = { ...benADefault };
+
+if(window.location.pathname.indexOf('login.html') === -1) {
+    // 1. Tải dữ liệu Tài khoản
+    database.ref('usersDB').on('value', (snapshot) => {
+        if(snapshot.exists()) { usersDB = snapshot.val(); loadBangTaiKhoan(); }
+    });
+
+    // 2. Tải dữ liệu Công nợ (ÉP KIỂU MẢNG ĐỂ CHỐNG LỖI ĐỨT ĐOẠN)
+    database.ref('congNoDB').on('value', (snapshot) => {
+        if(snapshot.exists()) {
+            let data = snapshot.val();
+            db.hopDongs = data.hopDongs ? Object.values(data.hopDongs) : [];
+            db.phuLucs = data.phuLucs ? Object.values(data.phuLucs) : [];
+            db.hoaDons = data.hoaDons ? Object.values(data.hoaDons) : [];
+            db.thanhToans = data.thanhToans ? Object.values(data.thanhToans) : [];
+            
+            renderTable(); 
+            loadSelectOptions(); 
+            loadDsHopDongNT();
+        } else {
+            db = { hopDongs: [], phuLucs: [], hoaDons: [], thanhToans: [] };
+            renderTable();
+        }
+    });
+
+    // 3. Tải dữ liệu Nghiệm thu
+    database.ref('nghiemThuDB').on('value', (snapshot) => {
+        if(snapshot.exists()) nghiemThuDB = snapshot.val(); 
+        else nghiemThuDB = {};
+        renderDanhSachBBNT(); 
+    });
+
+    // 4. Tải thông tin Bên A
+    database.ref('thongTinBenA_v1').on('value', (snapshot) => {
+        if(snapshot.exists()) { benA = snapshot.val(); renderBenANT(); }
+    });
+}
+
+// CÁC HÀM ĐẨY DỮ LIỆU LÊN ĐÁM MÂY
+function saveData() { database.ref('congNoDB').set(db); }
+function saveUsers() { database.ref('usersDB').set(usersDB); }
+function saveNghiemThu() { database.ref('nghiemThuDB').set(nghiemThuDB); }
+
 function dangXuat() {
     sessionStorage.removeItem('currentUser');
     window.location.href = "login.html";
 }
 
-let usersDB = JSON.parse(localStorage.getItem('usersDB_v1')) || {};
-
+// ==========================================
+// 2. KHỞI TẠO GIAO DIỆN & PHÂN QUYỀN
+// ==========================================
 $(document).ready(function() {
     if(currentUser) {
         document.getElementById('currentUserName').innerText = currentUser.username.toUpperCase();
@@ -36,13 +92,8 @@ $(document).ready(function() {
     }
     
     $('.search-select').select2();
-    loadSelectOptions(); 
-    loadDsHopDongNT();
-    renderDanhSachBBNT(); 
-    renderBenANT();
     updateDocNT();
-    renderTable();
-    loadBangTaiKhoan();
+    renderBenANT();
 });
 
 function toggleCompanySelect() {
@@ -59,10 +110,9 @@ function taoTaiKhoan() {
     if(r === 'user' && !c) return alert("Vui lòng chọn Công ty cho tài khoản đối tác!");
 
     usersDB[u] = { password: p, role: r, company: r === 'admin' ? 'ALL' : c };
-    localStorage.setItem('usersDB_v1', JSON.stringify(usersDB));
+    saveUsers();
     alert("Đã tạo tài khoản thành công!");
     document.getElementById('newUsername').value = ''; document.getElementById('newPassword').value = '';
-    loadBangTaiKhoan();
 }
 
 function loadBangTaiKhoan() {
@@ -76,26 +126,17 @@ function loadBangTaiKhoan() {
 }
 
 function xoaTaiKhoan(u) {
-    if(confirm(`Chắc chắn xóa tài khoản ${u}?`)) { delete usersDB[u]; localStorage.setItem('usersDB_v1', JSON.stringify(usersDB)); loadBangTaiKhoan(); }
+    if(confirm(`Chắc chắn xóa tài khoản ${u}?`)) { delete usersDB[u]; saveUsers(); }
 }
 
 // ==========================================
-// 2. LOGIC QUẢN LÝ CÔNG NỢ (TABS 1, 2, 3)
+// 3. LOGIC QUẢN LÝ CÔNG NỢ (TABS 1, 2, 3)
 // ==========================================
-let db = JSON.parse(localStorage.getItem('congNoDB_v2')) || { hopDongs: [], phuLucs: [], hoaDons: [], thanhToans: [] };
-
 const formatTien = (tien) => new Intl.NumberFormat('vi-VN').format(tien);
 function formatDate(dateString) {
     if(!dateString) return '';
     const parts = dateString.split('-');
     return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateString;
-}
-
-function saveData() { 
-    localStorage.setItem('congNoDB_v2', JSON.stringify(db)); 
-    loadSelectOptions(); 
-    loadDsHopDongNT(); 
-    renderTable(); 
 }
 
 function switchTab(tabId, btn) {
@@ -206,8 +247,26 @@ function loadHopDongVaHoaDonTT() {
     document.getElementById('selectHoaDonTT').innerHTML = optInv;
 }
 
+// ----------------------------------------------------
+// TÍNH NĂNG MỚI: TÀI KHOẢN CON NHẬP NHANH SỐ HỢP ĐỒNG
+// ----------------------------------------------------
+function luuNhanhSoHD(idHoaDon) {
+    let inputSoHD = document.getElementById(`soHD_input_${idHoaDon}`);
+    if(!inputSoHD) return;
+    let soHDMoi = inputSoHD.value.trim();
+    
+    let index = db.hoaDons.findIndex(h => h.id === idHoaDon);
+    if(index !== -1) {
+        db.hoaDons[index].idHD_Text = soHDMoi; // Lưu text số HĐ vào thuộc tính mới
+        saveData();
+        alert("Đã lưu số hợp đồng thành công!");
+    }
+}
+
 function renderTable() {
-    let locCongTy = document.getElementById('filterCongTy').value, filterThangNhap = document.getElementById('filterThangNhap').value, filterDate = document.getElementById('filterDate').value; 
+    let locCongTy = document.getElementById('filterCongTy').value;
+    let filterThangNhap = document.getElementById('filterThangNhap').value;
+    let filterDate = document.getElementById('filterDate').value; 
     let fHoaDons = db.hoaDons, fThanhToans = db.thanhToans;
 
     if(filterThangNhap) fHoaDons = fHoaDons.filter(hd => hd.ngayNhapKho && hd.ngayNhapKho.startsWith(filterThangNhap));
@@ -228,11 +287,31 @@ function renderTable() {
     Object.keys(groupedByCty).sort().forEach(key => {
         let ctyGroup = groupedByCty[key];
         ctyGroup.invoices.forEach(hoaDon => {
-            let hopDong = db.hopDongs.find(hd => hd.id === hoaDon.idHD), soHienThiHD = hopDong ? hopDong.soHopDong : 'Chưa gán HĐ';
+            // Lấy số HĐ từ ô nhập tay (idHD_Text) hoặc từ HĐ đã gán
+            let hopDong = db.hopDongs.find(hd => hd.id === hoaDon.idHD);
+            let valSoHD = hoaDon.idHD_Text || (hopDong ? hopDong.soHopDong : '');
+            
+            // Render ô nhập liệu
+            let oNhapSoHD = `
+                <div style="display:flex; gap:5px; align-items:center;">
+                    <input type="text" id="soHD_input_${hoaDon.id}" value="${valSoHD}" placeholder="Nhập số..." style="width:110px; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                    <button onclick="luuNhanhSoHD('${hoaDon.id}')" style="background:#28a745; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Lưu</button>
+                </div>`;
+
             let gdThanhToan = fThanhToans.filter(tt => tt.idHoaDon === hoaDon.id), daThanhToan = gdThanhToan.length > 0;
             tongTatCaNhapKho += hoaDon.soTien; 
             if (!daThanhToan) { ctyGroup.totalNo += hoaDon.soTien; tongTatCaNo += hoaDon.soTien; }
-            html += `<tr><td><strong>${ctyGroup.displayName}</strong></td><td>${soHienThiHD}</td><td>${hoaDon.soHoaDon}</td><td class="text-center">${formatDate(hoaDon.ngayHoaDon)}</td><td class="text-center" style="color:#1D6F42;font-weight:bold;">${formatDate(hoaDon.ngayNhapKho)}</td><td class="text-right"><strong>${formatTien(hoaDon.soTien)}</strong></td><td class="text-center">${daThanhToan ? formatDate(gdThanhToan[gdThanhToan.length-1].ngay) : '-'}</td><td class="text-center">${daThanhToan ? 'Đã TT' : 'Chưa TT'}</td></tr>`;
+            
+            html += `<tr>
+                <td><strong>${ctyGroup.displayName}</strong></td>
+                <td>${oNhapSoHD}</td>
+                <td>${hoaDon.soHoaDon}</td>
+                <td class="text-center">${formatDate(hoaDon.ngayHoaDon)}</td>
+                <td class="text-center" style="color:#1D6F42;font-weight:bold;">${formatDate(hoaDon.ngayNhapKho)}</td>
+                <td class="text-right"><strong>${formatTien(hoaDon.soTien)}</strong></td>
+                <td class="text-center">${daThanhToan ? formatDate(gdThanhToan[gdThanhToan.length-1].ngay) : '-'}</td>
+                <td class="text-center">${daThanhToan ? 'Đã TT' : 'Chưa TT'}</td>
+            </tr>`;
         });
         if (ctyGroup.totalNo > 0 || locCongTy !== 'ALL') html += `<tr style="background:#f4f8fb;"><td colspan="5" class="text-right bold" style="color:#0056b3;">Tổng nợ ${ctyGroup.displayName}:</td><td class="text-right text-danger bold">${formatTien(ctyGroup.totalNo)}</td><td colspan="2"></td></tr>`;
     });
@@ -245,22 +324,10 @@ function renderTable() {
 function inBaoCaoTongHop() { alert("Chức năng in báo cáo công nợ."); }
 function inBaoCaoChiTiet() { alert("Chức năng in báo cáo chi tiết."); }
 
-
 // ==========================================
-// 3. LOGIC BIÊN BẢN NGHIỆM THU (TAB 4)
+// 4. LOGIC BIÊN BẢN NGHIỆM THU (TAB 4)
 // ==========================================
-let nghiemThuDB = JSON.parse(localStorage.getItem('nghiemThuDB_v1')) || {};
-let currentExcelDataNT = [];
-
-let benADefault = {
-    ten: "TRUNG TÂM Y TẾ KHU VỰC HÀM THUẬN BẮC", diaChi: "Km 17 Đường 8/4, Thôn Lâm Hòa, xã Hàm Thuận, tỉnh Lâm Đồng",
-    sdt: "0252. 3611812               Fax: 0252. 3610675", email: "ytehamthuanbac@gmail.com",
-    tk: "3716.2.1030529.00000 ; 9527.2.1030529", giaoDich: "giao dịch tại KBNN Khu vực XVI - PGD số 12",
-    mst: "3400517197", maDV: "1030529", daiDien: "TRẦN GIAO HÙNG", chucVu: "Giám Đốc"
-};
-
 function renderBenANT() {
-    let benA = JSON.parse(localStorage.getItem('thongTinBenA_v1')) || benADefault;
     document.getElementById('docTenBenA_TitleNT').innerText = benA.ten; document.getElementById('docTenBenA_CCTNT').innerText = benA.ten.toLowerCase(); document.getElementById('docTenBenANT').innerText = benA.ten;
     document.getElementById('docDiaChiANT').innerText = benA.diaChi; document.getElementById('docSDTANT').innerText = benA.sdt; document.getElementById('docEmailANT').innerText = benA.email;
     document.getElementById('docTKANT').innerText = benA.tk; document.getElementById('docGiaoDichANT').innerText = benA.giaoDich; document.getElementById('docMSTANT').innerText = benA.mst;
@@ -273,7 +340,6 @@ function docFileExcelBenA() {
     let reader = new FileReader();
     reader.onload = function(e) {
         let rows = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).Sheets[XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).SheetNames[0]], {header: 1, raw: true});
-        let benA = JSON.parse(localStorage.getItem('thongTinBenA_v1')) || { ...benADefault };
         for(let i=0; i<rows.length; i++) {
             if(!rows[i] || !rows[i][0] || rows[i][1]===undefined) continue;
             let key = rows[i][0].toString().toLowerCase(), val = rows[i][1].toString().trim();
@@ -283,7 +349,7 @@ function docFileExcelBenA() {
             else if(key.includes('thuế')||key.includes('mst')) benA.mst = val; else if(key.includes('đvq')||key.includes('mã đv')) benA.maDV = val;
             else if(key.includes('đại diện')) benA.daiDien = val; else if(key.includes('chức vụ')) benA.chucVu = val;
         }
-        localStorage.setItem('thongTinBenA_v1', JSON.stringify(benA)); renderBenANT(); alert("Đã cập nhật Bên A thành công!"); fileInput.value = "";
+        database.ref('thongTinBenA_v1').set(benA); alert("Đã cập nhật Bên A lên máy chủ thành công!"); fileInput.value = "";
     };
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
@@ -314,12 +380,9 @@ function updateDocNT() {
     document.getElementById('docNgayKyNT').innerText = dateVal ? `${('0'+new Date(dateVal).getDate()).slice(-2)} tháng ${('0'+(new Date(dateVal).getMonth()+1)).slice(-2)} năm ${new Date(dateVal).getFullYear()}` : "..... tháng ..... năm 202...";
     
     document.getElementById('docSoBBNT').innerText = document.getElementById('inpSoBBNT').value || '.......';
-    
-    // Cập nhật trường Quyết định
     document.getElementById('docSoQDNT').innerText = document.getElementById('inpSoQDNT').value;
     document.getElementById('docDonViQDNT').innerText = document.getElementById('inpDonViQDNT').value;
     document.getElementById('docNoiDungQDNT').innerText = document.getElementById('inpNoiDungQDNT').value;
-
     document.getElementById('docSoHDNT').innerText = document.getElementById('inpSoHDNT').value;
     document.getElementById('docNgayHDNT').innerText = document.getElementById('inpNgayHDNT').value;
     
@@ -379,13 +442,11 @@ function renderTableDataNT() {
     document.getElementById('tongTienBangChuNT').innerText = docTienBangChuNT(tong);
 }
 
-// HIỂN THỊ VÀ THAO TÁC TRÊN BẢNG DANH SÁCH BBNT
 function renderDanhSachBBNT() {
     let tbody = '';
     let keys = Object.keys(nghiemThuDB).reverse(); 
     keys.forEach(name => {
         let r = nghiemThuDB[name];
-        
         if(currentUser.role === 'user' && r.tenBenB !== currentUser.company) return;
 
         let tongTien = r.excelData ? r.excelData.reduce((sum, item) => sum + item.thanhTien, 0) : 0;
@@ -413,29 +474,19 @@ function saveRecordNT() {
     if(!name) return alert("Vui lòng đặt tên cho Biên Bản ở ô bên dưới (Ví dụ: BBNT_CPC1_Thang4) rồi mới bấm Lưu!");
 
     nghiemThuDB[name] = { 
-        name: name, 
-        soBBNT: document.getElementById('inpSoBBNT').value,
-        ngayKy: document.getElementById('inpNgayKyNT').value, 
-        soQD: document.getElementById('inpSoQDNT').value, 
-        donViQD: document.getElementById('inpDonViQDNT').value,
-        noiDungQD: document.getElementById('inpNoiDungQDNT').value,
-        soHD: document.getElementById('inpSoHDNT').value, 
-        ngayHD: document.getElementById('inpNgayHDNT').value, 
-        phuLuc: document.getElementById('inpPhuLucNT').value, 
-        tenBenB: document.getElementById('inpTenBenBNT').value, 
-        diaChiB: document.getElementById('inpDiaChiBNT').value, 
-        sdtB: document.getElementById('inpSDTBNT').value, 
-        tkB: document.getElementById('inpTKBNT').value, 
-        mstB: document.getElementById('inpMSTBNT').value, 
-        daiDienB: document.getElementById('inpDaiDienBNT').value, 
-        chucVuB: document.getElementById('inpChucVuBNT').value, 
-        guq: document.getElementById('inpGUQNT').value, 
-        excelData: currentExcelDataNT 
+        name: name, soBBNT: document.getElementById('inpSoBBNT').value,
+        ngayKy: document.getElementById('inpNgayKyNT').value, soQD: document.getElementById('inpSoQDNT').value, 
+        donViQD: document.getElementById('inpDonViQDNT').value, noiDungQD: document.getElementById('inpNoiDungQDNT').value,
+        soHD: document.getElementById('inpSoHDNT').value, ngayHD: document.getElementById('inpNgayHDNT').value, 
+        phuLuc: document.getElementById('inpPhuLucNT').value, tenBenB: document.getElementById('inpTenBenBNT').value, 
+        diaChiB: document.getElementById('inpDiaChiBNT').value, sdtB: document.getElementById('inpSDTBNT').value, 
+        tkB: document.getElementById('inpTKBNT').value, mstB: document.getElementById('inpMSTBNT').value, 
+        daiDienB: document.getElementById('inpDaiDienBNT').value, chucVuB: document.getElementById('inpChucVuBNT').value, 
+        guq: document.getElementById('inpGUQNT').value, excelData: currentExcelDataNT 
     };
     
-    localStorage.setItem('nghiemThuDB_v1', JSON.stringify(nghiemThuDB));
-    alert("Đã lưu biên bản thành công!"); 
-    renderDanhSachBBNT();
+    saveNghiemThu(); 
+    alert("Đã lưu biên bản lên máy chủ thành công!"); 
 }
 
 function loadRecordNT(name) {
@@ -466,8 +517,7 @@ function loadRecordNT(name) {
 function xoaRecordNT(name) {
     if(confirm(`Bạn có chắc chắn muốn XÓA biên bản: ${name} không?`)) {
         delete nghiemThuDB[name];
-        localStorage.setItem('nghiemThuDB_v1', JSON.stringify(nghiemThuDB));
-        renderDanhSachBBNT();
+        saveNghiemThu();
         lamMoiFormNT();
     }
 }
@@ -478,11 +528,11 @@ function nhanBanRecordNT(name) {
     let newName = name + " (Copy " + Math.floor(Math.random() * 100) + ")";
     let newRecord = JSON.parse(JSON.stringify(r)); 
     newRecord.name = newName;
-    newRecord.soBBNT = ""; // Reset số biên bản để nhập mới
+    newRecord.soBBNT = ""; // Reset số biên bản
     newRecord.ngayKy = ""; // Reset ngày ký
     nghiemThuDB[newName] = newRecord;
-    localStorage.setItem('nghiemThuDB_v1', JSON.stringify(nghiemThuDB));
-    renderDanhSachBBNT();
+    
+    saveNghiemThu();
     loadRecordNT(newName); 
     alert(`Đã nhân bản biên bản thành công!\nVui lòng sửa lại Ngày ký và Số biên bản mới.`);
 }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Đăng Nhập Hệ Thống Nghiệm Thu & Công Nợ</title>
     <style>
-        /* Hiệu ứng nền chuyển màu mượt mà */
+        /* Giữ nguyên toàn bộ phần CSS của anh */
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             margin: 0; height: 100vh; 
@@ -13,14 +13,11 @@
             background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
         }
-
         @keyframes gradientBG {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-
-        /* Hiệu ứng trượt lên cho khung đăng nhập */
         .login-box { 
             background: rgba(255, 255, 255, 0.95); 
             padding: 40px 30px; 
@@ -32,30 +29,19 @@
             transform: translateY(30px);
             opacity: 0;
         }
-
-        @keyframes slideUpFade {
-            to { transform: translateY(0); opacity: 1; }
-        }
-
+        @keyframes slideUpFade { to { transform: translateY(0); opacity: 1; } }
         .login-box h2 { color: #0056b3; margin-top: 0; font-weight: 800; letter-spacing: 1px;}
-        
         .form-group { margin-bottom: 20px; text-align: left; }
         .form-group label { font-weight: bold; font-size: 13px; display: block; margin-bottom: 8px; color: #555;}
-        
-        /* Hiệu ứng khi nhấp vào ô nhập liệu */
         .form-group input { 
             width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; 
             transition: all 0.3s ease;
             background: #f8f9fa;
         }
         .form-group input:focus {
-            border-color: #0056b3;
-            background: #fff;
-            box-shadow: 0 0 8px rgba(0,86,179,0.2);
-            outline: none;
+            border-color: #0056b3; background: #fff;
+            box-shadow: 0 0 8px rgba(0,86,179,0.2); outline: none;
         }
-
-        /* Hiệu ứng nút bấm */
         .btn-login { 
             background: linear-gradient(135deg, #28a745, #20c997); 
             color: white; border: none; padding: 14px; width: 100%; 
@@ -63,25 +49,17 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 6px rgba(40,167,69,0.2);
         }
-        .btn-login:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 6px 12px rgba(40,167,69,0.3); 
-        }
-        .btn-login:active {
-            transform: translateY(0);
-        }
-
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(40,167,69,0.3); }
         .footer-copyright {
-            margin-top: 30px; padding-top: 15px; border-top: 1px dashed #ccc; font-size: 12px; color: #666; line-height: 1.5;
-            animation: fadeIn 1s ease-in 0.5s forwards;
-            opacity: 0;
+            margin-top: 30px; padding-top: 15px; border-top: 1px dashed #ccc; font-size: 12px; color: #666;
+            animation: fadeIn 1s ease-in 0.5s forwards; opacity: 0;
         }
         @keyframes fadeIn { to { opacity: 1; } }
     </style>
 </head>
 <body>
     <div class="login-box">
-        <div style="font-size: 40px; margin-bottom: 10px; animation: bounce 2s infinite;">🏥</div>
+        <div style="font-size: 40px; margin-bottom: 10px;">🏥</div>
         <h2>ĐĂNG NHẬP</h2>
         <div class="form-group">
             <label>Tài khoản:</label>
@@ -91,30 +69,62 @@
             <label>Mật khẩu:</label>
             <input type="password" id="password" placeholder="Nhập mật khẩu...">
         </div>
-        <button class="btn-login" onclick="thucHienDangNhap()">VÀO HỆ THỐNG</button>
+        <button class="btn-login" id="btnLogin" onclick="thucHienDangNhap()">VÀO HỆ THỐNG</button>
         
-        <p style="font-size: 12px; color: #999; margin-top: 15px;"></p>
-
         <div class="footer-copyright">
             <strong style="color: #0056b3; font-size: 13px;">Bản quyền © 2026 - Designed & Coded by Đặng Ngọc Văn</strong>
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+
     <script>
-        let usersDB = JSON.parse(localStorage.getItem('usersDB_v1'));
-        if(!usersDB) {
-            usersDB = { "admin": { password: "123", role: "admin", company: "ALL" } };
-            localStorage.setItem('usersDB_v1', JSON.stringify(usersDB));
-        }
+        // 2. CẤU HÌNH FIREBASE CỦA ANH
+        const firebaseConfig = {
+            apiKey: "AIzaSyCXpgGBn7DW6YAvutPLNgiftT3FOSX-Dqc",
+            authDomain: "congnohtb.firebaseapp.com",
+            databaseURL: "https://congnohtb-default-rtdb.asia-southeast1.firebasedatabase.app/", 
+            projectId: "congnohtb",
+            storageBucket: "congnohtb.firebasestorage.app",
+            messagingSenderId: "371764204361",
+            appId: "1:371764204361:web:33a1a6e653288280088098",
+            measurementId: "G-YWY3B77NTZ"
+        };
+
+        // Khởi tạo Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let usersDB = {};
+
+        // 3. LẤY DỮ LIỆU TÀI KHOẢN TỪ ĐÁM MÂY
+        database.ref('usersDB').on('value', (snapshot) => {
+            if(snapshot.exists()) {
+                usersDB = snapshot.val();
+            } else {
+                // Nếu mây chưa có tài khoản nào, tự tạo admin mặc định
+                usersDB = { "admin": { password: "123", role: "admin", company: "ALL" } };
+                database.ref('usersDB').set(usersDB);
+            }
+        });
 
         function thucHienDangNhap() {
             let u = document.getElementById('username').value.trim().toLowerCase();
             let p = document.getElementById('password').value;
             
+            if(Object.keys(usersDB).length === 0) {
+                alert("Đang kết nối máy chủ, vui lòng đợi vài giây...");
+                return;
+            }
+
             if(usersDB[u] && usersDB[u].password === p) {
-                sessionStorage.setItem('currentUser', JSON.stringify({ username: u, role: usersDB[u].role, company: usersDB[u].company }));
+                sessionStorage.setItem('currentUser', JSON.stringify({ 
+                    username: u, 
+                    role: usersDB[u].role, 
+                    company: usersDB[u].company 
+                }));
                 
-                // Hiệu ứng mờ dần khi chuyển trang
                 document.body.style.opacity = '0';
                 document.body.style.transition = 'opacity 0.5s ease';
                 setTimeout(() => window.location.href = "index.html", 400);

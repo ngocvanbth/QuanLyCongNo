@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Quản Lý Viện Phí & Vật Tư</title>
+    <title>Hệ Thống Quản Lý Công Nợ</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -78,22 +78,35 @@
     </div>
 
     <div id="tab-theo-doi" class="tab-content">
-        <div class="filter-bar" id="thanhCongCuLoc">
-            <div class="form-group"><label>Công ty</label><select id="filterCongTy" class="search-select"><option value="ALL">Tất cả</option></select></div>
-            <div class="form-group"><label>Tháng Nhập Kho</label><input type="month" id="filterThangNhap" onchange="renderTable()"></div>
-            <div class="form-group"><label>Nợ đến ngày</label><input type="date" id="filterDate" onchange="renderTable()"></div>
-            <div><button class="btn btn-success" onclick="inBaoCaoTongHop()" style="margin-bottom:5px;width:100%;">Xuất PDF Tổng Hợp</button><button class="btn btn-warning" onclick="inBaoCaoChiTiet()" style="width:100%;">Xuất PDF Chi Tiết</button></div>
+    <div class="filter-bar" id="thanhCongCuLoc">
+        <div class="form-group"><label>Công ty</label><select id="filterCongTy" class="search-select"><option value="ALL">Tất cả</option></select></div>
+        <div class="form-group"><label>Tháng Nhập Kho</label><input type="month" id="filterThangNhap" onchange="renderTable()"></div>
+        <div class="form-group"><label>Nợ đến ngày</label><input type="date" id="filterDate" onchange="renderTable()"></div>
+        <div>
+            <button class="btn btn-success" onclick="inBaoCaoTongHop()" style="margin-bottom:5px;width:100%;">Xuất PDF Tổng Hợp</button>
+            <button class="btn btn-warning" onclick="inBaoCaoChiTiet()" style="width:100%;">Xuất PDF Chi Tiết</button>
         </div>
-        <table>
-            <thead><tr><th>Công ty</th><th>Số HĐ</th><th>Số Hóa Đơn</th><th>Ngày HĐ</th><th style="background:#1D6F42;">Ngày NK</th><th class="text-right">Số Tiền (VNĐ)</th><th>Ngày TT</th><th>Trạng Thái</th></tr></thead>
-            <tbody id="bangTheoDoi"></tbody><tfoot id="bangTheoDoiFoot" style="background:#e9ecef;"></tfoot>
-        </table>
     </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Công ty</th>
+                <th>Số hợp đồng</th> <th>Số Hóa Đơn</th>
+                <th>Ngày HĐ</th>
+                <th style="background:#1D6F42;">Ngày NK</th>
+                <th class="text-right">Số Tiền (VNĐ)</th>
+                <th>Ngày TT</th>
+                <th>Trạng Thái</th>
+                <th>Thao tác</th> </tr>
+        </thead>
+        <tbody id="bangTheoDoi"></tbody>
+        <tfoot id="bangTheoDoiFoot" style="background:#e9ecef;"></tfoot>
+    </table>
+</div>
 
     <div id="tab-nghiem-thu" class="tab-content">
         <div class="nghiem-thu-layout">
             <div class="control-panel-nt">
-                
                 <div class="save-box-nt" id="khuVucQuanLyBBNT" style="background:#d1ecf1; padding:10px; border-radius:5px; margin-bottom:15px;">
                     <h4 style="margin:0 0 10px; color:#0c5460;">📂 Danh Sách Biên Bản Nghiệm Thu</h4>
                     <div style="max-height: 200px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #bee5eb; background: white;">
@@ -106,8 +119,7 @@
                                     <th style="padding: 5px; border: 1px solid #bee5eb; width: 135px; text-align: center;">Thao tác</th>
                                 </tr>
                             </thead>
-                            <tbody id="dsBBNTBody">
-                                </tbody>
+                            <tbody id="dsBBNTBody"></tbody>
                         </table>
                     </div>
                     <button class="btn btn-warning" style="width: 100%; font-size: 13px; padding: 6px; font-weight: bold;" onclick="lamMoiFormNT()">+ TẠO BIÊN BẢN MỚI TỪ ĐẦU</button>
@@ -275,6 +287,26 @@
 </div>
 
 <div id="print-section"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCXpgGBn7DW6YAvutPLNgiftT3FOSX-Dqc",
+        authDomain: "congnohtb.firebaseapp.com",
+        databaseURL: "https://congnohtb-default-rtdb.asia-southeast1.firebasedatabase.app/", 
+        projectId: "congnohtb",
+        storageBucket: "congnohtb.firebasestorage.app",
+        messagingSenderId: "371764204361",
+        appId: "1:371764204361:web:33a1a6e653288280088098",
+        measurementId: "G-YWY3B77NTZ"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+</script>
+
 <script src="script.js"></script>
+
 </body>
 </html>
