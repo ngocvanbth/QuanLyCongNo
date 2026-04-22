@@ -138,7 +138,8 @@
                 <div class="form-group-nt" id="khuVucCapNhatBenA" style="background:#fff3cd; padding:10px; border-radius:5px; margin-bottom:15px; display:none;">
                     <label>🏢 Cập nhật Bên A (Admin mới thấy):</label>
                     <input type="file" id="fileExcelBenA" accept=".xlsx, .xls">
-                    <button class="btn-excel" style="background:#d39e00;margin-top:5px;" onclick="docFileExcelBenA()">Lưu Bên A</button>
+                    <button class="btn-excel" style="background:#d39e00;margin-top:5px; width: 48%; display: inline-block;" onclick="docFileExcelBenA()">Lưu Bên A</button>
+                    <button class="btn" style="background:#28a745; color:white; margin-top:5px; width: 48%; display: inline-block; font-size:12px; padding:8px 8px; border-radius:3px; border:none; cursor:pointer;" onclick="taiMauExcelBenA()">📥 Tải File Mẫu</button>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -182,7 +183,8 @@
                 <div class="form-group-nt" style="background:#e2e3e5; padding:10px; border-radius:5px; margin-top:15px;">
                     <label>Tải Bảng Kê Hóa Đơn Excel:</label>
                     <input type="file" id="fileExcelNT" accept=".xlsx, .xls">
-                    <button class="btn-excel" style="margin-top:5px;" onclick="docFileExcelNT()">Đổ Dữ Liệu Vào Bảng</button>
+                    <button class="btn-excel" style="margin-top:5px; width: 48%; display: inline-block;" onclick="docFileExcelNT()">Đổ Dữ Liệu Vào Bảng</button>
+                    <button class="btn" style="background:#28a745; color:white; margin-top:5px; width: 48%; display: inline-block; font-size:12px; padding:8px 8px; border-radius:3px; border:none; cursor:pointer;" onclick="taiMauExcelHoaDonNT()">📥 Tải File Mẫu</button>
                 </div>
 
                 <div class="form-group-nt" style="margin-top: 15px; background: #cce5ff; padding: 15px; border-radius: 5px;">
@@ -192,13 +194,16 @@
                 </div>
                 
                 <button class="btn btn-success" style="width:100%; margin-top:10px; font-size:16px;" onclick="inBienBanNghiemThu()">🖨️ IN BIÊN BẢN (A4)</button>
-                <button class="btn btn-primary" style="width:100%; margin-top:10px; font-size:16px; background:#007bff; color:white;" onclick="xuatFileWord()">📄 XUẤT FILE WORD</button>
+                <button class="btn btn-primary" style="width:100%; margin-top:10px; font-size:16px; background:#007bff; color:white;" onclick="xuatFileWordBBNT()">📄 XUẤT FILE WORD</button>
             </div>
 
             <div class="a4-wrapper-nt">
                 <div class="a4-container-nt" id="ban-in-nghiem-thu">
                     <div class="header-nt">
-                        <div class="left"><span id="docTenBenA_TitleNT" style="text-transform:uppercase;">TTYT HTB</span><div class="line"></div></div>
+                        <div class="left">
+                            <img src="link_anh_logo_cua_anh.png" alt="Logo TTYT" style="height: 65px; width: auto; margin-bottom: 5px;">
+                            <div class="line"></div>
+                        </div>
                         <div class="right">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc lập – Tự do – Hạnh phúc<div class="line" style="width:50%;"></div></div>
                     </div>
                     <div class="date-text-nt">Hàm Thuận, ngày <span id="docNgayKyNT">..... tháng ..... năm 202...</span></div>
@@ -208,7 +213,7 @@
 
                     <div class="content-section-nt">
                         <div class="indent-nt">Căn cứ Quyết định số <span id="docSoQDNT" class="bold-nt">...........</span> của <span id="docDonViQDNT">.........................</span> <span id="docNoiDungQDNT">..................................................................</span>;</div>
-                        <div class="indent-nt">Căn cứ Hợp đồng số: <span id="docSoHDNT" class="bold-nt">.......</span> ngày <span id="docNgayHDNT">.......</span><span id="docPhuLucNT"></span> giữa <span id="docTenBenA_CCTNT">TTYT HTB</span> và <span id="docTenBenB1NT" class="bold-nt">.......</span>;</div>
+                        <div class="indent-nt">Căn cứ Hợp đồng số: <span id="docSoHDNT" class="bold-nt">.......</span> ngày <span id="docNgayHDNT">.......</span><span id="docPhuLucNT"></span> giữa <span class="bold-nt">Trung tâm Y tế Khu vực Hàm Thuận Bắc</span> và <span id="docTenBenB1NT" class="bold-nt">.......</span>;</div>
                         <div class="indent-nt">Hôm nay tại Bên A chúng tôi gồm:</div>
                         
                         <div><span class="bold-nt">Chủ đầu tư (sau đây gọi là Bên A)</span></div>
@@ -250,16 +255,22 @@
                         <div>- Biên bản này được lập thành 03 (ba) bản có giá trị pháp lý như nhau, bên A giữ 02 (hai) bản, bên B giữ 01 (một) bản.</div>
                     </div>
                     
-                    <table class="layout-table-nt" style="margin-top:30px; text-align:center;">
+                    <table style="width: 100%; text-align: center; border: none; margin-top: 30px; font-family: 'Times New Roman', serif;">
                         <tr>
-                            <td style="width:50%; text-align:center;">
-                                <div class="bold-nt">ĐẠI DIỆN BÊN A</div><br><br><br><br><br>
-                                <div class="bold-nt" id="docDaiDienA_KyNT" style="text-transform:uppercase;">...</div>
+                            <td style="width: 50%; vertical-align: top; border: none; padding-bottom: 80px;">
+                                <strong style="font-size: 16px;">ĐẠI DIỆN BÊN A</strong>
                             </td>
-                            <td style="width:50%; text-align:center;">
-                                <div class="bold-nt">ĐẠI DIỆN BÊN B</div>
-                                <div class="bold-nt" id="docChucVuB_KyNT" style="text-transform:uppercase;">...</div><br><br><br><br><br>
-                                <div class="bold-nt" id="docDaiDienB_KyNT" style="text-transform:uppercase;">...</div>
+                            <td style="width: 50%; vertical-align: top; border: none; padding-bottom: 80px;">
+                                <strong style="font-size: 16px;">ĐẠI DIỆN BÊN B</strong><br>
+                                <strong style="font-size: 16px; text-transform: uppercase;" id="docChucVuB_KyNT">...</strong>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%; vertical-align: bottom; border: none;">
+                                <strong style="font-size: 16px; text-transform: uppercase;" id="docDaiDienA_KyNT">...</strong>
+                            </td>
+                            <td style="width: 50%; vertical-align: bottom; border: none;">
+                                <strong style="font-size: 16px; text-transform: uppercase;" id="docDaiDienB_KyNT">...</strong>
                             </td>
                         </tr>
                     </table>
