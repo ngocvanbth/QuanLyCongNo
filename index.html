@@ -12,12 +12,11 @@
     <link rel="stylesheet" href="style.css">
 
     <style>
-        /* TẮT HEADER/FOOTER NGÀY THÁNG, LINK WEB MẶC ĐỊNH KHI IN */
         @media print {
             @page { margin: 0; } 
-            body { margin: 1cm; } /* Chừa lề cho nội dung bản in */
-            #main-ui, .no-print { display: none !important; } /* Ẩn giao diện web và thanh chào khi in */
-            #print-section { display: block; } /* Chỉ hiện vùng cần in */
+            body { margin: 1cm; } 
+            #main-ui, .no-print { display: none !important; } 
+            #print-section { display: block; } 
         }
     </style>
 </head>
@@ -200,7 +199,6 @@
 
             <div class="a4-wrapper-nt">
                 <div class="a4-container-nt" id="ban-in-nghiem-thu">
-                    
                     <div class="header-nt" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; font-family: 'Times New Roman', serif;">
                         <div class="left" style="text-align: center; width: 45%;">
                             <img src="logo.png" alt="Logo" style="height: 60px; width: auto; margin-bottom: 5px;">
@@ -300,6 +298,16 @@
                     <select id="newUserCompany" class="search-select" style="width:100%"></select>
                 </div>
                 <button class="btn btn-success" onclick="taoTaiKhoan()">Lưu Tài Khoản</button>
+                
+                <div class="form-group-nt" style="background:#e2e3e5; padding:15px; border-radius:5px; margin-top:20px; border-left: 4px solid #17a2b8;">
+                    <label style="color:#0056b3; font-weight:bold;">🚀 Tạo Tài Khoản Hàng Loạt (Excel):</label>
+                    <input type="file" id="fileExcelTaiKhoan" accept=".xlsx, .xls" style="margin-top:10px; width:100%;">
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <button class="btn" style="background:#28a745; color:white; width:50%; font-size:12px;" onclick="taiMauExcelTaiKhoan()">📥 Tải File Mẫu</button>
+                        <button class="btn" style="background:#17a2b8; color:white; width:50%; font-size:12px;" onclick="taoTaiKhoanHangLoat()">Đẩy Dữ Liệu Lên</button>
+                    </div>
+                </div>
+
             </div>
             <div class="form-box">
                 <h3>Danh sách Tài khoản</h3>

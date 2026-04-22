@@ -25,7 +25,6 @@ if(window.location.pathname.indexOf('login.html') === -1) {
             usersDB = snapshot.val(); 
             loadBangTaiKhoan(); 
             
-            // KIỂM TRA ĐĂNG NHẬP LẦN ĐẦU KHI VỪA VÀO TRANG
             if(currentUser && usersDB[currentUser.username]) {
                 let myData = usersDB[currentUser.username];
                 if(myData.isFirstLogin === true) {
@@ -85,10 +84,10 @@ function hienThiModalDoiMatKhau(isBatBuoc) {
     if(isBatBuoc) {
         document.getElementById('doiMatKhauTitle').innerText = '🔑 YÊU CẦU ĐỔI MẬT KHẨU';
         document.getElementById('doiMatKhauMsg').innerText = 'Đây là lần đăng nhập đầu tiên, bạn phải đổi mật khẩu để tiếp tục sử dụng hệ thống.';
-        document.getElementById('btnHuyDoiPass').style.display = 'none'; // Giấu nút Hủy
+        document.getElementById('btnHuyDoiPass').style.display = 'none'; 
     } else {
         document.getElementById('doiMatKhauTitle').innerText = '🔑 ĐỔI MẬT KHẨU';
-        document.getElementById('btnHuyDoiPass').style.display = 'block'; // Hiện nút Hủy
+        document.getElementById('btnHuyDoiPass').style.display = 'block'; 
     }
 }
 
@@ -108,9 +107,8 @@ function luuMatKhauMoi() {
     if(newP.length < 4) return alert("❌ Mật khẩu mới quá ngắn, vui lòng nhập ít nhất 4 ký tự!");
     if(newP !== confP) return alert("❌ Mật khẩu xác nhận không khớp!");
     
-    // Cập nhật lên CSDL
     user.password = newP;
-    user.isFirstLogin = false; // Gỡ cờ đăng nhập lần đầu
+    user.isFirstLogin = false; 
     saveUsers();
     
     alert("✅ Đã đổi mật khẩu thành công!");
@@ -165,11 +163,63 @@ function taoTaiKhoan() {
     if(!u || !p) return alert("Vui lòng nhập đủ tên đăng nhập và mật khẩu!");
     if(r === 'user' && !c) return alert("Vui lòng chọn Công ty cho tài khoản đối tác!");
 
-    // TẠO TÀI KHOẢN KÈM CỜ (isFirstLogin: true) ĐỂ ÉP ĐỔI MẬT KHẨU
     usersDB[u] = { password: p, role: r, company: r === 'admin' ? 'ALL' : c, isFirstLogin: true };
     saveUsers();
     alert("Đã tạo tài khoản thành công!");
     document.getElementById('newUsername').value = ''; document.getElementById('newPassword').value = '';
+}
+
+// TÍNH NĂNG TẠO TÀI KHOẢN HÀNG LOẠT
+function taiMauExcelTaiKhoan() {
+    let ws = XLSX.utils.aoa_to_sheet([
+        ["Tên đăng nhập (Viết liền không dấu)", "Mật khẩu", "Quyền hạn (user/admin)", "Tên Công ty quản lý (Chính xác tên Cty)"],
+        ["doitac_cpc1", "123456", "user", "Công ty Cổ phần Dược phẩm CPC1 Hà Nội"],
+        ["ketoan_admin", "123456", "admin", "ALL"]
+    ]);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "TaoTaiKhoan");
+    XLSX.writeFile(wb, "Mau_Tao_Tai_Khoan_Hang_Loat.xlsx");
+}
+
+function taoTaiKhoanHangLoat() {
+    let fileInput = document.getElementById('fileExcelTaiKhoan');
+    if(!fileInput.files.length) return alert("Vui lòng chọn file Excel danh sách tài khoản trước!");
+
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        let rows = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).Sheets[XLSX.read(new Uint8Array(e.target.result), {type: 'array'}).SheetNames[0]], {header: 1, raw: true});
+        let count = 0;
+        
+        for(let i = 1; i < rows.length; i++) {
+            let row = rows[i];
+            if(!row || !row[0] || !row[1]) continue;
+
+            let u = row[0].toString().trim().toLowerCase();
+            let p = row[1].toString();
+            let r = (row[2] && row[2].toString().toLowerCase() === 'admin') ? 'admin' : 'user';
+            let c = row[3] ? row[3].toString().trim() : '';
+
+            if(r === 'user' && !c) continue; // Phải có công ty nếu là đối tác
+
+            usersDB[u] = {
+                password: p,
+                role: r,
+                company: r === 'admin' ? 'ALL' : c,
+                isFirstLogin: true // Gắn cờ bắt buộc đổi pass
+            };
+            count++;
+        }
+
+        if(count > 0) {
+            saveUsers();
+            alert(`✅ Đã tạo thành công ${count} tài khoản từ file Excel!\nTất cả tài khoản này sẽ bị yêu cầu đổi mật khẩu ở lần đăng nhập đầu tiên.`);
+            loadBangTaiKhoan();
+        } else {
+            alert("❌ Không có tài khoản nào hợp lệ được tạo. Kiểm tra lại file Excel.");
+        }
+        fileInput.value = "";
+    };
+    reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
 function loadBangTaiKhoan() {
@@ -177,10 +227,9 @@ function loadBangTaiKhoan() {
     for(let key in usersDB) {
         let btnXoa = key === 'admin' ? '' : `<button onclick="xoaTaiKhoan('${key}')" style="background:#dc3545;color:white;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;">Xóa</button>`;
         
-        let passToDisplay = usersDB[key].password; // Admin được xem MK
+        let passToDisplay = usersDB[key].password; 
         let trangThaiMK = usersDB[key].isFirstLogin ? '<br><span style="color:red; font-size:10px;">(Chưa đổi MK mới)</span>' : '';
 
-        // Đã thêm cột password (cột thứ 2)
         tbody += `<tr>
             <td>${key}</td>
             <td style="color:#0056b3; font-weight:bold;">${passToDisplay} ${trangThaiMK}</td>
