@@ -1,5 +1,5 @@
 // ==========================================
-// 1. KẾT NỐI FIREBASE & CHUẨN HÓA DỮ LIỆU (CHỐNG ĐỨT ĐOẠN)
+// 1. KẾT NỐI FIREBASE & CHUẨN HÓA DỮ LIỆU
 // ==========================================
 let currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
 if(!currentUser && window.location.pathname.indexOf('login.html') === -1) {
@@ -20,12 +20,21 @@ let benADefault = {
 let benA = { ...benADefault };
 
 if(window.location.pathname.indexOf('login.html') === -1) {
-    // 1. Tải dữ liệu Tài khoản
     database.ref('usersDB').on('value', (snapshot) => {
-        if(snapshot.exists()) { usersDB = snapshot.val(); loadBangTaiKhoan(); }
+        if(snapshot.exists()) { 
+            usersDB = snapshot.val(); 
+            loadBangTaiKhoan(); 
+            
+            // KIỂM TRA ĐĂNG NHẬP LẦN ĐẦU KHI VỪA VÀO TRANG
+            if(currentUser && usersDB[currentUser.username]) {
+                let myData = usersDB[currentUser.username];
+                if(myData.isFirstLogin === true) {
+                    hienThiModalDoiMatKhau(true);
+                }
+            }
+        }
     });
 
-    // 2. Tải dữ liệu Công nợ (ÉP KIỂU MẢNG ĐỂ CHỐNG LỖI ĐỨT ĐOẠN)
     database.ref('congNoDB').on('value', (snapshot) => {
         if(snapshot.exists()) {
             let data = snapshot.val();
@@ -43,20 +52,17 @@ if(window.location.pathname.indexOf('login.html') === -1) {
         }
     });
 
-    // 3. Tải dữ liệu Nghiệm thu
     database.ref('nghiemThuDB').on('value', (snapshot) => {
         if(snapshot.exists()) nghiemThuDB = snapshot.val(); 
         else nghiemThuDB = {};
         renderDanhSachBBNT(); 
     });
 
-    // 4. Tải thông tin Bên A
     database.ref('thongTinBenA_v1').on('value', (snapshot) => {
         if(snapshot.exists()) { benA = snapshot.val(); renderBenANT(); }
     });
 }
 
-// CÁC HÀM ĐẨY DỮ LIỆU LÊN ĐÁM MÂY
 function saveData() { database.ref('congNoDB').set(db); }
 function saveUsers() { database.ref('usersDB').set(usersDB); }
 function saveNghiemThu() { database.ref('nghiemThuDB').set(nghiemThuDB); }
@@ -67,7 +73,52 @@ function dangXuat() {
 }
 
 // ==========================================
-// 2. KHỞI TẠO GIAO DIỆN & PHÂN QUYỀN
+// TÍNH NĂNG ĐỔI MẬT KHẨU
+// ==========================================
+function hienThiModalDoiMatKhau(isBatBuoc) {
+    document.getElementById('modalDoiMatKhau').style.display = 'flex';
+    document.getElementById('oldPass').value = '';
+    document.getElementById('newPass').value = '';
+    document.getElementById('confirmPass').value = '';
+    document.getElementById('doiMatKhauMsg').innerText = '';
+    
+    if(isBatBuoc) {
+        document.getElementById('doiMatKhauTitle').innerText = '🔑 YÊU CẦU ĐỔI MẬT KHẨU';
+        document.getElementById('doiMatKhauMsg').innerText = 'Đây là lần đăng nhập đầu tiên, bạn phải đổi mật khẩu để tiếp tục sử dụng hệ thống.';
+        document.getElementById('btnHuyDoiPass').style.display = 'none'; // Giấu nút Hủy
+    } else {
+        document.getElementById('doiMatKhauTitle').innerText = '🔑 ĐỔI MẬT KHẨU';
+        document.getElementById('btnHuyDoiPass').style.display = 'block'; // Hiện nút Hủy
+    }
+}
+
+function dongModalDoiMatKhau() {
+    document.getElementById('modalDoiMatKhau').style.display = 'none';
+}
+
+function luuMatKhauMoi() {
+    let user = usersDB[currentUser.username];
+    if(!user) return alert("Lỗi: Không tìm thấy tài khoản trong hệ thống!");
+    
+    let oldP = document.getElementById('oldPass').value;
+    let newP = document.getElementById('newPass').value;
+    let confP = document.getElementById('confirmPass').value;
+    
+    if(oldP !== user.password) return alert("❌ Mật khẩu hiện tại không đúng!");
+    if(newP.length < 4) return alert("❌ Mật khẩu mới quá ngắn, vui lòng nhập ít nhất 4 ký tự!");
+    if(newP !== confP) return alert("❌ Mật khẩu xác nhận không khớp!");
+    
+    // Cập nhật lên CSDL
+    user.password = newP;
+    user.isFirstLogin = false; // Gỡ cờ đăng nhập lần đầu
+    saveUsers();
+    
+    alert("✅ Đã đổi mật khẩu thành công!");
+    dongModalDoiMatKhau();
+}
+
+// ==========================================
+// 2. KHỞI TẠO GIAO DIỆN & QUẢN TRỊ ADMIN
 // ==========================================
 $(document).ready(function() {
     if(currentUser) {
@@ -95,7 +146,6 @@ $(document).ready(function() {
     updateDocNT();
     renderBenANT();
 
-    // SỬA LỖI #1: Lắng nghe sự kiện để bảng tự động load lại khi chọn công ty
     $('#filterCongTy').on('change', renderTable);
     $('#filterCongTy').on('select2:select', renderTable); 
     $('#filterThangNhap').on('change', renderTable);
@@ -115,7 +165,8 @@ function taoTaiKhoan() {
     if(!u || !p) return alert("Vui lòng nhập đủ tên đăng nhập và mật khẩu!");
     if(r === 'user' && !c) return alert("Vui lòng chọn Công ty cho tài khoản đối tác!");
 
-    usersDB[u] = { password: p, role: r, company: r === 'admin' ? 'ALL' : c };
+    // TẠO TÀI KHOẢN KÈM CỜ (isFirstLogin: true) ĐỂ ÉP ĐỔI MẬT KHẨU
+    usersDB[u] = { password: p, role: r, company: r === 'admin' ? 'ALL' : c, isFirstLogin: true };
     saveUsers();
     alert("Đã tạo tài khoản thành công!");
     document.getElementById('newUsername').value = ''; document.getElementById('newPassword').value = '';
@@ -125,7 +176,18 @@ function loadBangTaiKhoan() {
     let tbody = '';
     for(let key in usersDB) {
         let btnXoa = key === 'admin' ? '' : `<button onclick="xoaTaiKhoan('${key}')" style="background:#dc3545;color:white;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;">Xóa</button>`;
-        tbody += `<tr><td>${key}</td><td>${usersDB[key].role}</td><td>${usersDB[key].company}</td><td class="text-center">${btnXoa}</td></tr>`;
+        
+        let passToDisplay = usersDB[key].password; // Admin được xem MK
+        let trangThaiMK = usersDB[key].isFirstLogin ? '<br><span style="color:red; font-size:10px;">(Chưa đổi MK mới)</span>' : '';
+
+        // Đã thêm cột password (cột thứ 2)
+        tbody += `<tr>
+            <td>${key}</td>
+            <td style="color:#0056b3; font-weight:bold;">${passToDisplay} ${trangThaiMK}</td>
+            <td>${usersDB[key].role}</td>
+            <td>${usersDB[key].company}</td>
+            <td class="text-center">${btnXoa}</td>
+        </tr>`;
     }
     let bang = document.getElementById('bangTaiKhoan');
     if(bang) bang.innerHTML = tbody;
@@ -136,7 +198,7 @@ function xoaTaiKhoan(u) {
 }
 
 // ==========================================
-// 3. LOGIC QUẢN LÝ CÔNG NỢ (TABS 1, 2, 3)
+// 3. LOGIC QUẢN LÝ CÔNG NỢ
 // ==========================================
 const formatTien = (tien) => new Intl.NumberFormat('vi-VN').format(tien);
 function formatDate(dateString) {
@@ -258,9 +320,6 @@ function loadHopDongVaHoaDonTT() {
     document.getElementById('selectHoaDonTT').innerHTML = optInv;
 }
 
-// ----------------------------------------------------
-// TÍNH NĂNG MỚI: NHẬP NHANH SỐ HỢP ĐỒNG (SỬA LỖI KHÔNG LƯU)
-// ----------------------------------------------------
 function luuNhanhSoHD(idHoaDon) {
     let inputSoHD = document.getElementById(`soHD_input_${idHoaDon}`);
     if(!inputSoHD) return;
@@ -268,10 +327,10 @@ function luuNhanhSoHD(idHoaDon) {
     
     let index = db.hoaDons.findIndex(h => h.id === idHoaDon);
     if(index !== -1) {
-        db.hoaDons[index].idHD_Text = soHDMoi; // Lưu text số HĐ vào thuộc tính mới
+        db.hoaDons[index].idHD_Text = soHDMoi;
         saveData();
         alert("Đã lưu số hợp đồng thành công!");
-        renderTable(); // Bắt buộc render lại bảng để UI nhận số liệu mới
+        renderTable(); 
     }
 }
 
@@ -281,7 +340,6 @@ function renderTable() {
     let filterDate = document.getElementById('filterDate')?.value || ''; 
     let fHoaDons = db.hoaDons, fThanhToans = db.thanhToans;
 
-    // --- BƯỚC PHÂN QUYỀN TRỌNG YẾU ---
     let filteredHoaDons = [];
     if(currentUser.role === 'user') {
         filteredHoaDons = fHoaDons.filter(hd => hd.tenCongTy === currentUser.company);
@@ -343,15 +401,198 @@ function renderTable() {
     }
 }
 
-// IN BÁO CÁO (Code giữ nguyên của anh, em chỉ bổ sung kiểm tra null)
-function inBaoCaoTongHop() { /* (Giữ nguyên như mã cũ của anh) */ }
-function inBaoCaoChiTiet() { /* (Giữ nguyên như mã cũ của anh) */ }
+// ==========================================
+// HÀM IN BÁO CÁO CÔNG NỢ PDF
+// ==========================================
+function getInBaoCaoStyle() {
+    return `
+    <style>
+        @media print { @page { size: A4; margin: 15mm; } }
+        body { font-family: "Times New Roman", Times, serif; font-size: 13px; color: #000; }
+        .print-container { width: 100%; }
+        .header-table { width: 100%; margin-bottom: 20px; border: none; }
+        .header-table td { border: none; }
+        .report-title { text-align: center; text-transform: uppercase; font-size: 18px; font-weight: bold; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        th, td { border: 1px solid black; padding: 6px 4px; line-height: 1.4; }
+        th { background-color: #f2f2f2; text-align: center; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .bold { font-weight: bold; }
+        .group-row { background-color: #f9f9f9; font-weight: bold; }
+        .footer-sig { margin-top: 30px; width: 100%; border: none; }
+        .footer-sig td { border: none; text-align: center; width: 50%; }
+    </style>`;
+}
+
+function inBaoCaoTongHop() {
+    let filtered = (currentUser.role === 'user') 
+        ? db.hoaDons.filter(h => h.tenCongTy === currentUser.company)
+        : db.hoaDons;
+
+    let grouped = {};
+    filtered.forEach(h => {
+        if(!grouped[h.tenCongTy]) grouped[h.tenCongTy] = { total: 0, invoices: [] };
+        let isPaid = db.thanhToans.some(t => t.idHoaDon === h.id);
+        if(!isPaid) {
+            grouped[h.tenCongTy].total += h.soTien;
+            grouped[h.tenCongTy].invoices.push(h);
+        }
+    });
+
+    let rows = '', grandTotal = 0;
+    Object.keys(grouped).sort().forEach(cty => {
+        if(grouped[cty].total === 0) return;
+        grandTotal += grouped[cty].total;
+        rows += `
+            <tr class="group-row">
+                <td colspan="3">${cty}</td>
+                <td class="text-right">${formatTien(grouped[cty].total)}</td>
+                <td class="text-center">Chưa thanh toán</td>
+            </tr>`;
+        grouped[cty].invoices.forEach(inv => {
+            rows += `
+                <tr>
+                    <td style="padding-left: 20px;">+ Số HĐơn: ${inv.soHoaDon}</td>
+                    <td class="text-center">${formatDate(inv.ngayHoaDon)}</td>
+                    <td class="text-right">${formatTien(inv.soTien)}</td>
+                    <td></td><td></td>
+                </tr>`;
+        });
+    });
+
+    let content = `
+        ${getInBaoCaoStyle()}
+        <div class="print-container">
+            <table class="header-table">
+                <tr>
+                    <td width="50%" class="text-center"><strong>TRUNG TÂM Y TẾ H. HÀM THUẬN BẮC</strong><br>PHÒNG TÀI CHÍNH KẾ TOÁN</td>
+                    <td class="text-center"><strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><br>Độc lập - Tự do - Hạnh phúc</td>
+                </tr>
+            </table>
+            <div class="report-title">BÁO CÁO TỔNG HỢP CÔNG NỢ PHẢI TRẢ</div>
+            <p class="text-right"><i>Ngày in: ${new Date().toLocaleDateString('vi-VN')}</i></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Đơn vị / Hóa đơn</th>
+                        <th>Ngày HĐ</th>
+                        <th>Số tiền</th>
+                        <th>Tổng nợ đơn vị</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot>
+                    <tr class="bold" style="font-size: 15px;">
+                        <td colspan="3" class="text-right">TỔNG CỘNG NỢ PHẢI TRẢ:</td>
+                        <td class="text-right" style="color: red;">${formatTien(grandTotal)}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+            <table class="footer-sig">
+                <tr>
+                    <td><strong>NGƯỜI LẬP BIỂU</strong></td>
+                    <td><strong>TRƯỞNG PHÒNG TCKT</strong></td>
+                </tr>
+                <tr style="height: 80px;"><td></td><td></td></tr>
+                <tr><td>${currentUser.username.toUpperCase()}</td><td></td></tr>
+            </table>
+        </div>`;
+    
+    document.getElementById('print-section').innerHTML = content;
+    window.print();
+}
+
+function inBaoCaoChiTiet() {
+    let locCty = document.getElementById('filterCongTy').value;
+    let filtered = (currentUser.role === 'user') 
+        ? db.hoaDons.filter(h => h.tenCongTy === currentUser.company)
+        : (locCty !== 'ALL' ? db.hoaDons.filter(h => h.tenCongTy === locCty) : db.hoaDons);
+
+    let grouped = {};
+    filtered.forEach(h => {
+        let hopDong = db.hopDongs.find(hd => hd.id === h.idHD);
+        let labelHD = h.idHD_Text || (hopDong ? hopDong.soHopDong : 'Hóa đơn ngoài HĐ');
+        let key = h.tenCongTy + "|||" + labelHD;
+        
+        if(!grouped[key]) grouped[key] = { cty: h.tenCongTy, hd: labelHD, items: [], subTotal: 0 };
+        let isPaid = db.thanhToans.some(t => t.idHoaDon === h.id);
+        if(!isPaid) {
+            grouped[key].subTotal += h.soTien;
+            grouped[key].items.push(h);
+        }
+    });
+
+    let rows = '', grandTotal = 0;
+    Object.keys(grouped).sort().forEach(k => {
+        let g = grouped[k];
+        if(g.items.length === 0) return;
+        grandTotal += g.subTotal;
+        rows += `<tr class="group-row"><td colspan="6">${g.cty} - HĐ: ${g.hd}</td></tr>`;
+        g.items.forEach(inv => {
+            rows += `
+                <tr>
+                    <td class="text-center">${inv.soHoaDon}</td>
+                    <td class="text-center">${formatDate(inv.ngayHoaDon)}</td>
+                    <td class="text-center">${formatDate(inv.ngayNhapKho)}</td>
+                    <td class="text-right">${formatTien(inv.soTien)}</td>
+                    <td class="text-center">Chưa thanh toán</td>
+                    <td class="text-right">${formatTien(inv.soTien)}</td>
+                </tr>`;
+        });
+        rows += `<tr class="bold"><td colspan="5" class="text-right">Cộng nợ Hợp đồng:</td><td class="text-right">${formatTien(g.subTotal)}</td></tr>`;
+    });
+
+    let content = `
+        ${getInBaoCaoStyle()}
+        <div class="print-container">
+            <table class="header-table">
+                <tr>
+                    <td width="50%" class="text-center"><strong>TRUNG TÂM Y TẾ H. HÀM THUẬN BẮC</strong><br>PHÒNG TÀI CHÍNH KẾ TOÁN</td>
+                    <td class="text-center"><strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><br>Độc lập - Tự do - Hạnh phúc</td>
+                </tr>
+            </table>
+            <h2 class="report-title">BÁO CÁO CHI TIẾT CÔNG NỢ THEO HỢP ĐỒNG</h2>
+            <p class="text-center">Đối tượng: ${locCty === 'ALL' ? 'Tất cả đối tác' : locCty}</p>
+            <p class="text-right"><i>Ngày in: ${new Date().toLocaleDateString('vi-VN')}</i></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Số HĐơn</th>
+                        <th>Ngày HĐ</th>
+                        <th>Ngày nhập</th>
+                        <th>Số tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Còn nợ</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot>
+                    <tr class="bold" style="background: #eee; font-size: 14px;">
+                        <td colspan="5" class="text-right">TỔNG CỘNG DƯ NỢ:</td>
+                        <td class="text-right" style="color: red;">${formatTien(grandTotal)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <table class="footer-sig">
+                <tr>
+                    <td><strong>NGƯỜI LẬP BIỂU</strong></td>
+                    <td><strong>TRƯỞNG PHÒNG TCKT</strong></td>
+                </tr>
+                <tr style="height: 80px;"><td></td><td></td></tr>
+                <tr><td>${currentUser.username.toUpperCase()}</td><td></td></tr>
+            </table>
+        </div>`;
+    
+    document.getElementById('print-section').innerHTML = content;
+    window.print();
+}
 
 // ==========================================
 // 4. LOGIC BIÊN BẢN NGHIỆM THU (TAB 4)
 // ==========================================
-
-// THÊM MỚI: Các hàm tạo file Excel mẫu để Tải Về
 function taiMauExcelBenA() {
     let ws = XLSX.utils.aoa_to_sheet([
         ["Trường dữ liệu", "Giá trị nhập"], 
@@ -382,10 +623,8 @@ function taiMauExcelHoaDonNT() {
     XLSX.writeFile(wb, "Mau_Bang_Ke_Hoa_Don_NT.xlsx");
 }
 
-// THÊM MỚI: Xuất file Word Biên Bản Nghiệm Thu
 function xuatFileWordBBNT() {
     let htmlContent = document.getElementById("ban-in-nghiem-thu").innerHTML;
-    // Chèn header HTML chuẩn để Word đọc được layout
     let preHtml = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Biên Bản Nghiệm Thu</title><style>body { font-family: 'Times New Roman', serif; font-size: 14pt; } table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid black; padding: 5px; text-align: left; } .bold-nt { font-weight: bold; }</style></head><body>";
     let postHtml = "</body></html>";
     let sourceHTML = preHtml + htmlContent + postHtml;
@@ -417,7 +656,6 @@ function renderBenANT() {
 }
 
 function docFileExcelBenA() {
-    // ... (Giữ nguyên)
     let fileInput = document.getElementById('fileExcelBenA');
     if(!fileInput.files.length) return alert("Chọn file Excel thông tin Bên A trước!");
     let reader = new FileReader();
@@ -577,7 +815,6 @@ function saveRecordNT() {
     alert("Đã lưu biên bản lên máy chủ thành công!"); 
 }
 
-// SỬA LỖI #2: Gán an toàn dữ liệu để không bị kẹt khi click "Sửa"
 function loadRecordNT(name) {
     let r = nghiemThuDB[name]; if(!r) return;
     
@@ -616,20 +853,18 @@ function xoaRecordNT(name) {
     }
 }
 
-// SỬA LỖI #3: Nhân bản record và update lại bảng ngay
 function nhanBanRecordNT(name) {
     let r = nghiemThuDB[name];
     if(!r) return;
     let newName = name + " (Copy " + Math.floor(Math.random() * 100) + ")";
     let newRecord = JSON.parse(JSON.stringify(r)); 
     newRecord.name = newName;
-    newRecord.soBBNT = ""; // Reset số biên bản
-    newRecord.ngayKy = ""; // Reset ngày ký
+    newRecord.soBBNT = ""; 
+    newRecord.ngayKy = ""; 
     nghiemThuDB[newName] = newRecord;
     
     saveNghiemThu();
     
-    // Đợi 1 nhịp ngắn để Firebase phản hồi rồi load dữ liệu lên Form
     setTimeout(() => {
         loadRecordNT(newName);
         renderDanhSachBBNT();

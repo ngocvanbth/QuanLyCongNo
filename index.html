@@ -15,17 +15,18 @@
         /* TẮT HEADER/FOOTER NGÀY THÁNG, LINK WEB MẶC ĐỊNH KHI IN */
         @media print {
             @page { margin: 0; } 
-            body { margin: 1.5cm; } /* Chừa lề cho nội dung bản in */
-            #main-ui { display: none; } /* Ẩn giao diện web khi in */
+            body { margin: 1cm; } /* Chừa lề cho nội dung bản in */
+            #main-ui, .no-print { display: none !important; } /* Ẩn giao diện web và thanh chào khi in */
             #print-section { display: block; } /* Chỉ hiện vùng cần in */
         }
     </style>
 </head>
 <body>
 
-<div style="background: #0056b3; color: white; padding: 10px 20px; text-align: right; font-weight: bold; font-family: Arial;">
+<div class="no-print" style="background: #0056b3; color: white; padding: 10px 20px; text-align: right; font-weight: bold; font-family: Arial;">
     <span class="wave-hand" style="font-size: 16px;">👋</span> Xin chào, <span id="currentUserName" style="color: #ffc107;">...</span> |
     <span id="currentUserRole" style="font-size: 12px; font-weight: normal; margin-right: 15px;"></span>
+    <button onclick="hienThiModalDoiMatKhau(false)" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 5px;">🔑 Đổi mật khẩu</button>
     <button onclick="dangXuat()" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold;">Đăng xuất</button>
 </div>
 
@@ -199,13 +200,18 @@
 
             <div class="a4-wrapper-nt">
                 <div class="a4-container-nt" id="ban-in-nghiem-thu">
-                    <div class="header-nt">
-                        <div class="left">
-                            <img src="link_anh_logo_cua_anh.png" alt="Logo TTYT" style="height: 65px; width: auto; margin-bottom: 5px;">
-                            <div class="line"></div>
+                    
+                    <div class="header-nt" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; font-family: 'Times New Roman', serif;">
+                        <div class="left" style="text-align: center; width: 45%;">
+                            <img src="logo.png" alt="Logo" style="height: 60px; width: auto; margin-bottom: 5px;">
+                            <div class="line" style="border-top: 1px solid black; width: 60%; margin: 0 auto;"></div>
                         </div>
-                        <div class="right">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc lập – Tự do – Hạnh phúc<div class="line" style="width:50%;"></div></div>
+                        <div class="right" style="text-align: center; width: 55%;">
+                            <div style="font-weight: bold; font-size: 16px;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                            <div style="font-weight: bold; font-size: 16px; text-decoration: underline;">Độc lập – Tự do – Hạnh phúc</div>
+                        </div>
                     </div>
+
                     <div class="date-text-nt">Hàm Thuận, ngày <span id="docNgayKyNT">..... tháng ..... năm 202...</span></div>
                     
                     <div class="title-nt" style="margin-bottom: 5px;">BIÊN BẢN NGHIỆM THU HÀNG HÓA</div>
@@ -298,7 +304,7 @@
             <div class="form-box">
                 <h3>Danh sách Tài khoản</h3>
                 <table style="font-size: 13px;">
-                    <thead><tr><th>Tài khoản</th><th>Quyền</th><th>Công ty quản lý</th><th>Thao tác</th></tr></thead>
+                    <thead><tr><th>Tài khoản</th><th>Mật khẩu</th><th>Quyền</th><th>Công ty quản lý</th><th>Thao tác</th></tr></thead>
                     <tbody id="bangTaiKhoan"></tbody>
                 </table>
             </div>
@@ -311,11 +317,35 @@
 
 <div id="print-section"></div>
 
+<div id="modalDoiMatKhau" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:white; padding:25px; border-radius:8px; width:350px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+        <h3 id="doiMatKhauTitle" style="margin-top:0; color:#0056b3; border-bottom:2px solid #0056b3; padding-bottom:10px;">Đổi Mật Khẩu</h3>
+        <p id="doiMatKhauMsg" style="font-size:13px; color:#dc3545; font-weight:bold; margin-bottom:15px;"></p>
+        
+        <div class="form-group">
+            <label style="font-weight:bold;">Mật khẩu hiện tại:</label>
+            <input type="password" id="oldPass" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+        </div>
+        <div class="form-group" style="margin-top:10px;">
+            <label style="font-weight:bold;">Mật khẩu mới:</label>
+            <input type="password" id="newPass" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+        </div>
+        <div class="form-group" style="margin-top:10px;">
+            <label style="font-weight:bold;">Xác nhận mật khẩu mới:</label>
+            <input type="password" id="confirmPass" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+        </div>
+        
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button id="btnHuyDoiPass" onclick="dongModalDoiMatKhau()" style="flex:1; background:#6c757d; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold;">Hủy Xóa</button>
+            <button onclick="luuMatKhauMoi()" style="flex:1; background:#28a745; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold;">Lưu Mật Khẩu</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 
 <script>
-    // CẤU HÌNH NHÀ KHO FIREBASE MỚI
     const firebaseConfig = {
         apiKey: "AIzaSyBk1uOfJvVBshRTlM7T8JxrlGRjqec_PPA",
         authDomain: "congnohtb-4a77a.firebaseapp.com",
