@@ -169,7 +169,6 @@ function taoTaiKhoan() {
     document.getElementById('newUsername').value = ''; document.getElementById('newPassword').value = '';
 }
 
-// TÍNH NĂNG TẠO TÀI KHOẢN HÀNG LOẠT
 function taiMauExcelTaiKhoan() {
     let ws = XLSX.utils.aoa_to_sheet([
         ["Tên đăng nhập (Viết liền không dấu)", "Mật khẩu", "Quyền hạn (user/admin)", "Tên Công ty quản lý (Chính xác tên Cty)"],
@@ -199,13 +198,13 @@ function taoTaiKhoanHangLoat() {
             let r = (row[2] && row[2].toString().toLowerCase() === 'admin') ? 'admin' : 'user';
             let c = row[3] ? row[3].toString().trim() : '';
 
-            if(r === 'user' && !c) continue; // Phải có công ty nếu là đối tác
+            if(r === 'user' && !c) continue; 
 
             usersDB[u] = {
                 password: p,
                 role: r,
                 company: r === 'admin' ? 'ALL' : c,
-                isFirstLogin: true // Gắn cờ bắt buộc đổi pass
+                isFirstLogin: true 
             };
             count++;
         }
@@ -250,6 +249,8 @@ function xoaTaiKhoan(u) {
 // 3. LOGIC QUẢN LÝ CÔNG NỢ
 // ==========================================
 const formatTien = (tien) => new Intl.NumberFormat('vi-VN').format(tien);
+
+// Hàm format ngày định dạng dd/mm/yyyy
 function formatDate(dateString) {
     if(!dateString) return '';
     const parts = dateString.split('-');
@@ -673,7 +674,29 @@ function taiMauExcelHoaDonNT() {
 }
 
 function xuatFileWordBBNT() {
-    let htmlContent = document.getElementById("ban-in-nghiem-thu").innerHTML;
+    let printDiv = document.getElementById("ban-in-nghiem-thu");
+    
+    let cloneDiv = printDiv.cloneNode(true);
+    
+    let imgs = cloneDiv.getElementsByTagName('img');
+    if(imgs.length > 0) {
+        let imgThucTe = printDiv.getElementsByTagName('img')[0];
+        try {
+            let canvas = document.createElement('canvas');
+            canvas.width = imgThucTe.naturalWidth || 60;
+            canvas.height = imgThucTe.naturalHeight || 60;
+            let ctx = canvas.getContext('2d');
+            ctx.drawImage(imgThucTe, 0, 0);
+            let dataURL = canvas.toDataURL('image/png');
+            imgs[0].src = dataURL; 
+            imgs[0].setAttribute('width', '60');
+            imgs[0].setAttribute('height', '60');
+        } catch(e) {
+            console.log("Không thể convert ảnh sang base64 do lỗi chính sách bảo mật trình duyệt.");
+        }
+    }
+
+    let htmlContent = cloneDiv.innerHTML;
     let preHtml = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Biên Bản Nghiệm Thu</title><style>body { font-family: 'Times New Roman', serif; font-size: 14pt; } table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid black; padding: 5px; text-align: left; } .bold-nt { font-weight: bold; }</style></head><body>";
     let postHtml = "</body></html>";
     let sourceHTML = preHtml + htmlContent + postHtml;
@@ -688,6 +711,7 @@ function xuatFileWordBBNT() {
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
 
+// BỔ SUNG GÁN GIÁ TRỊ CHỨC VỤ CHO BÊN A (docChucVuA_KyNT)
 function renderBenANT() {
     if(document.getElementById('docTenBenA_TitleNT')) document.getElementById('docTenBenA_TitleNT').innerText = benA.ten; 
     if(document.getElementById('docTenBenA_CCTNT')) document.getElementById('docTenBenA_CCTNT').innerText = benA.ten.toLowerCase(); 
@@ -702,6 +726,7 @@ function renderBenANT() {
     if(document.getElementById('docDaiDienANT')) document.getElementById('docDaiDienANT').innerText = benA.daiDien; 
     if(document.getElementById('docChucVuANT')) document.getElementById('docChucVuANT').innerText = benA.chucVu; 
     if(document.getElementById('docDaiDienA_KyNT')) document.getElementById('docDaiDienA_KyNT').innerText = benA.daiDien;
+    if(document.getElementById('docChucVuA_KyNT')) document.getElementById('docChucVuA_KyNT').innerText = benA.chucVu;
 }
 
 function docFileExcelBenA() {
@@ -810,8 +835,23 @@ function docFileExcelNT() {
 
 function renderTableDataNT() {
     let tbody = "", tong = 0;
-    currentExcelDataNT.forEach(i => { tong += i.thanhTien; tbody += `<tr><td>${i.stt}</td><td>${i.soHD}</td><td>${i.ngayHD}</td><td class="text-left">${i.tenHang}</td><td>${i.dvt}</td><td class="text-right">${formatTien(i.sl)}</td><td class="text-right">${formatTien(i.gia)}</td><td class="text-right">${formatTien(i.thanhTien)}</td></tr>`; });
+    currentExcelDataNT.forEach(i => { 
+        tong += i.thanhTien; 
+        
+        tbody += `<tr>
+            <td class="text-center">${i.stt}</td>
+            <td class="text-center">${i.soHD}</td>
+            <td class="text-center">${formatDate(i.ngayHD)}</td>
+            <td class="text-left">${i.tenHang}</td>
+            <td class="text-center">${i.dvt}</td>
+            <td class="text-right">${formatTien(i.sl)}</td>
+            <td class="text-right">${formatTien(i.gia)}</td>
+            <td class="text-right">${formatTien(i.thanhTien)}</td>
+        </tr>`; 
+    });
+    
     if(currentExcelDataNT.length === 0) tbody = `<tr><td colspan="8" style="text-align:center;font-style:italic;">(Chưa có dữ liệu)</td></tr>`;
+    
     if(document.getElementById('chiTietHoaDonNT')) document.getElementById('chiTietHoaDonNT').innerHTML = tbody;
     if(document.getElementById('tongTienBangSoNT')) document.getElementById('tongTienBangSoNT').innerText = formatTien(tong);
     if(document.getElementById('tongTienBangChuNT')) document.getElementById('tongTienBangChuNT').innerText = docTienBangChuNT(tong);

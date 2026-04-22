@@ -259,22 +259,27 @@
                         <div>- Biên bản này được lập thành 03 (ba) bản có giá trị pháp lý như nhau, bên A giữ 02 (hai) bản, bên B giữ 01 (một) bản.</div>
                     </div>
                     
-                    <table style="width: 100%; text-align: center; border: none; margin-top: 30px; font-family: 'Times New Roman', serif;">
+                    <table style="width: 100%; border-collapse: collapse; border: none; margin-top: 30px;">
                         <tr>
-                            <td style="width: 50%; vertical-align: top; border: none; padding-bottom: 80px;">
-                                <strong style="font-size: 16px;">ĐẠI DIỆN BÊN A</strong>
+                            <td style="width: 50%; text-align: center; vertical-align: top; border: none; padding: 0;">
+                                <p style="margin: 0; padding: 0; font-family: 'Times New Roman', serif; font-size: 16px; font-weight: bold;">ĐẠI DIỆN BÊN A</p>
+                                <p style="margin: 0; padding: 0; font-family: 'Times New Roman', serif; font-size: 16px; font-weight: bold; text-transform: uppercase;" id="docChucVuA_KyNT">...</p>
                             </td>
-                            <td style="width: 50%; vertical-align: top; border: none; padding-bottom: 80px;">
-                                <strong style="font-size: 16px;">ĐẠI DIỆN BÊN B</strong><br>
-                                <strong style="font-size: 16px; text-transform: uppercase;" id="docChucVuB_KyNT">...</strong>
+                            <td style="width: 50%; text-align: center; vertical-align: top; border: none; padding: 0;">
+                                <p style="margin: 0; padding: 0; font-family: 'Times New Roman', serif; font-size: 16px; font-weight: bold;">ĐẠI DIỆN BÊN B</p>
+                                <p style="margin: 0; padding: 0; font-family: 'Times New Roman', serif; font-size: 16px; font-weight: bold; text-transform: uppercase;" id="docChucVuB_KyNT">...</p>
                             </td>
                         </tr>
                         <tr>
-                            <td style="width: 50%; vertical-align: bottom; border: none;">
-                                <strong style="font-size: 16px; text-transform: uppercase;" id="docDaiDienA_KyNT">...</strong>
+                            <td style="height: 100px; border: none; padding: 0;"></td>
+                            <td style="height: 100px; border: none; padding: 0;"></td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%; text-align: center; vertical-align: top; border: none; padding: 0;">
+                                <p style="margin: 0; padding: 0; font-family: 'Times New Roman', serif; font-size: 16px; font-weight: bold; text-transform: uppercase;" id="docDaiDienA_KyNT">...</p>
                             </td>
-                            <td style="width: 50%; vertical-align: bottom; border: none;">
-                                <strong style="font-size: 16px; text-transform: uppercase;" id="docDaiDienB_KyNT">...</strong>
+                            <td style="width: 50%; text-align: center; vertical-align: top; border: none; padding: 0;">
+                                <p style="margin: 0; padding: 0; font-family: 'Times New Roman', serif; font-size: 16px; font-weight: bold; text-transform: uppercase;" id="docDaiDienB_KyNT">...</p>
                             </td>
                         </tr>
                     </table>
@@ -304,7 +309,7 @@
                     <input type="file" id="fileExcelTaiKhoan" accept=".xlsx, .xls" style="margin-top:10px; width:100%;">
                     <div style="display:flex; gap:10px; margin-top:10px;">
                         <button class="btn" style="background:#28a745; color:white; width:50%; font-size:12px;" onclick="taiMauExcelTaiKhoan()">📥 Tải File Mẫu</button>
-                        <button class="btn" style="background:#17a2b8; color:white; width:50%; font-size:12px;" onclick="taoTaiKhoanHangLoat()">Đẩy Dữ Liệu Lên</button>
+                        <button class="btn" style="background:#17a2b8; color:white; width:50%; font-size:12px;" onclick="taoTaiKhoanHangLoat()">Đẩy Dữ Luệu Lên</button>
                     </div>
                 </div>
 
