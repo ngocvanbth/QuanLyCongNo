@@ -107,6 +107,7 @@
                     <th class="text-right">Số Tiền (VNĐ)</th>
                     <th>Ngày TT</th>
                     <th>Trạng Thái</th>
+                    <th id="th-thao-tac" style="display:none; background:#dc3545; color:white; width: 40px;">Xóa</th>
                 </tr>
             </thead>
             <tbody id="bangTheoDoi"></tbody>
@@ -309,7 +310,7 @@
                     <input type="file" id="fileExcelTaiKhoan" accept=".xlsx, .xls" style="margin-top:10px; width:100%;">
                     <div style="display:flex; gap:10px; margin-top:10px;">
                         <button class="btn" style="background:#28a745; color:white; width:50%; font-size:12px;" onclick="taiMauExcelTaiKhoan()">📥 Tải File Mẫu</button>
-                        <button class="btn" style="background:#17a2b8; color:white; width:50%; font-size:12px;" onclick="taoTaiKhoanHangLoat()">Đẩy Dữ Luệu Lên</button>
+                        <button class="btn" style="background:#17a2b8; color:white; width:50%; font-size:12px;" onclick="taoTaiKhoanHangLoat()">Đẩy Dữ Liệu Lên</button>
                     </div>
                 </div>
 
@@ -322,7 +323,24 @@
                 </table>
             </div>
         </div>
+
+        <div class="form-box" style="border-left: 4px solid #dc3545; margin-top: 20px;">
+            <h3 style="color: #dc3545;">🗑️ Quản lý & Xóa Hợp Đồng / Tên Công Ty (Chỉ Admin)</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Dùng để dọn dẹp các tên công ty hoặc hợp đồng lỡ nhập sai trong quá trình thao tác.</p>
+            <table style="font-size: 13px;">
+                <thead>
+                    <tr>
+                        <th>Tên Công ty</th>
+                        <th>Số Hợp Đồng</th>
+                        <th>Giá trị gốc</th>
+                        <th style="width: 60px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="bangAdminHopDong"></tbody>
+            </table>
+        </div>
     </div>
+    
     <div style="text-align: center; margin-top: 20px; margin-bottom: 20px; font-size: 13px; color: #6c757d; font-family: Arial, sans-serif;">
         <strong style="color: #495057;">Bản quyền © 2026 - Designed & Coded by Đặng Ngọc Văn</strong>
     </div>
