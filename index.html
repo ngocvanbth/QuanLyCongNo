@@ -12,11 +12,21 @@
     <link rel="stylesheet" href="style.css">
 
     <style>
+        /* CẬP NHẬT LẠI CSS IN ẤN ĐỂ KHÔNG BỊ MẤT CHỮ VÀ DÀN TRANG ĐẸP HƠN */
         @media print {
-            @page { margin: 0; } 
-            body { margin: 1cm; } 
+            @page { 
+                size: A4; 
+                margin: 20mm 15mm 20mm 20mm; /* Lề: Trên 20mm, Phải 15mm, Dưới 20mm, Trái 20mm */
+            } 
+            body { margin: 0; padding: 0; } 
             #main-ui, .no-print { display: none !important; } 
             #print-section { display: block; } 
+            
+            /* Tránh việc bảng hoặc các hàng bị cắt ngang giữa 2 trang */
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            thead { display: table-header-group; }
+            tfoot { display: table-row-group; }
         }
     </style>
 </head>
@@ -251,10 +261,9 @@
                         <table id="bangHoaDonNT">
                             <thead><tr><th style="width:5%;">STT</th><th style="width:10%;">Số HĐ</th><th style="width:15%;">Ngày HĐ</th><th style="width:25%;">Hàng hóa</th><th style="width:8%;">ĐVT</th><th style="width:10%;">SL</th><th style="width:12%;">Đơn giá</th><th style="width:15%;">Thành tiền</th></tr></thead>
                             <tbody id="chiTietHoaDonNT"><tr><td colspan="8" style="text-align:center; font-style:italic;">(Chưa có dữ liệu)</td></tr></tbody>
-                            <tfoot><tr><td colspan="7" class="text-right bold-nt">Tổng cộng:</td><td class="text-right bold-nt" id="tongTienBangSoNT">0</td></tr></tfoot>
                         </table>
 
-                        <div class="bold-nt">Số tiền bằng chữ: <span id="tongTienBangChuNT" style="font-style:italic; font-weight:normal;">Không đồng.</span></div>
+                        <div class="bold-nt" style="margin-top: 10px;">Số tiền bằng chữ: <span id="tongTienBangChuNT" style="font-style:italic; font-weight:normal;">Không đồng.</span></div>
                         <div style="margin-top:15px;"><span class="bold-nt">Điều 2.</span></div>
                         <div>- Bên B đã hoàn thành việc giao nhận hàng hóa với bên A: Đúng số lượng, chất lượng, chủng loại, quy cách, hàm lượng, hạn dùng, đơn giá, xuất xứ theo hợp đồng đã ký kết.</div>
                         <div>- Biên bản này được lập thành 03 (ba) bản có giá trị pháp lý như nhau, bên A giữ 02 (hai) bản, bên B giữ 01 (một) bản.</div>

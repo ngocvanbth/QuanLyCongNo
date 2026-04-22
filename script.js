@@ -45,9 +45,11 @@ if(window.location.pathname.indexOf('login.html') === -1) {
             renderTable(); 
             loadSelectOptions(); 
             loadDsHopDongNT();
+            renderBangAdminHopDong();
         } else {
             db = { hopDongs: [], phuLucs: [], hoaDons: [], thanhToans: [] };
             renderTable();
+            renderBangAdminHopDong();
         }
     });
 
@@ -246,11 +248,53 @@ function xoaTaiKhoan(u) {
 }
 
 // ==========================================
+// TÍNH NĂNG XÓA HỢP ĐỒNG / CÔNG TY CHO ADMIN
+// ==========================================
+function renderBangAdminHopDong() {
+    if(!document.getElementById('bangAdminHopDong')) return;
+    let html = '';
+    db.hopDongs.forEach(hd => {
+        html += `<tr>
+            <td><strong>${hd.tenCongTy}</strong></td>
+            <td>${hd.soHopDong}</td>
+            <td class="text-right">${formatTien(hd.giaTriGoc)}</td>
+            <td class="text-center"><button onclick="xoaHopDong('${hd.id}')" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:11px;" title="Xóa Công ty/Hợp đồng này">❌ Xóa</button></td>
+        </tr>`;
+    });
+    if(db.hopDongs.length === 0) html = `<tr><td colspan="4" class="text-center" style="font-style:italic;">Chưa có dữ liệu</td></tr>`;
+    document.getElementById('bangAdminHopDong').innerHTML = html;
+}
+
+function xoaHopDong(id) {
+    let hd = db.hopDongs.find(h => h.id === id);
+    if(!hd) return;
+    
+    let hasInvoices = db.hoaDons.some(inv => inv.idHD === id || inv.tenCongTy === hd.tenCongTy);
+    let msg = hasInvoices 
+        ? `⚠️ CẢNH BÁO: Công ty [${hd.tenCongTy}] hiện đang có Hóa đơn gắn liền!\n\nNếu bạn xóa, các hóa đơn kia sẽ bị mất liên kết với hợp đồng này. Bạn vẫn chắc chắn muốn XÓA chứ?`
+        : `⚠️ Bạn có chắc chắn muốn xóa Công ty / Hợp đồng:\n[${hd.tenCongTy}]?`;
+        
+    if(confirm(msg)) {
+        db.hopDongs = db.hopDongs.filter(h => h.id !== id);
+        saveData();
+        alert("✅ Đã xóa Công ty/Hợp đồng thành công!");
+    }
+}
+
+function xoaHoaDon(id) {
+    if(confirm("⚠️ BẠN CÓ CHẮC CHẮN MUỐN XÓA HÓA ĐƠN NÀY?\n\nDữ liệu sẽ bị xóa vĩnh viễn và không thể khôi phục!")) {
+        db.hoaDons = db.hoaDons.filter(h => h.id !== id);
+        db.thanhToans = db.thanhToans.filter(t => t.idHoaDon !== id); 
+        saveData();
+        alert("✅ Đã xóa hóa đơn thành công!");
+    }
+}
+
+// ==========================================
 // 3. LOGIC QUẢN LÝ CÔNG NỢ
 // ==========================================
 const formatTien = (tien) => new Intl.NumberFormat('vi-VN').format(tien);
 
-// Hàm format ngày định dạng dd/mm/yyyy
 function formatDate(dateString) {
     if(!dateString) return '';
     const parts = dateString.split('-');
@@ -385,6 +429,11 @@ function luuNhanhSoHD(idHoaDon) {
 }
 
 function renderTable() {
+    let isAdmin = currentUser && currentUser.role === 'admin';
+    if(document.getElementById('th-thao-tac')) {
+        document.getElementById('th-thao-tac').style.display = isAdmin ? 'table-cell' : 'none';
+    }
+
     let locCongTy = document.getElementById('filterCongTy')?.value || 'ALL';
     let filterThangNhap = document.getElementById('filterThangNhap')?.value || '';
     let filterDate = document.getElementById('filterDate')?.value || ''; 
@@ -426,6 +475,8 @@ function renderTable() {
                 tongTatCaNo += hoaDon.soTien; 
             }
             
+            let btnXoaHoaDon = isAdmin ? `<td class="text-center"><button onclick="xoaHoaDon('${hoaDon.id}')" style="background:#dc3545; color:white; border:none; padding:4px 6px; border-radius:3px; cursor:pointer; font-size:11px;" title="Xóa Hóa đơn này">❌</button></td>` : '';
+            
             html += `<tr>
                 <td><strong>${ctyGroup.displayName}</strong></td>
                 <td>${oNhapSoHD}</td>
@@ -435,19 +486,24 @@ function renderTable() {
                 <td class="text-right"><strong>${formatTien(hoaDon.soTien)}</strong></td>
                 <td class="text-center">${daThanhToan ? formatDate(gdThanhToan[gdThanhToan.length-1].ngay) : '-'}</td>
                 <td class="text-center">${daThanhToan ? 'Đã TT' : 'Chưa TT'}</td>
+                ${btnXoaHoaDon}
             </tr>`;
         });
         
         if (ctyGroup.totalNo > 0) {
-            html += `<tr style="background:#f4f8fb;"><td colspan="5" class="text-right bold" style="color:#0056b3;">Tổng nợ ${ctyGroup.displayName}:</td><td class="text-right text-danger bold">${formatTien(ctyGroup.totalNo)}</td><td colspan="2"></td></tr>`;
+            let colSpanFoot = isAdmin ? 6 : 5;
+            let colEmpty = isAdmin ? 3 : 2;
+            html += `<tr style="background:#f4f8fb;"><td colspan="${colSpanFoot}" class="text-right bold" style="color:#0056b3;">Tổng nợ ${ctyGroup.displayName}:</td><td class="text-right text-danger bold">${formatTien(ctyGroup.totalNo)}</td><td colspan="${colEmpty}"></td></tr>`;
         }
     });
     
-    if(filteredHoaDons.length === 0) html = `<tr><td colspan="8" class="text-center">Chưa có dữ liệu</td></tr>`;
+    if(filteredHoaDons.length === 0) html = `<tr><td colspan="9" class="text-center">Chưa có dữ liệu</td></tr>`;
     if(document.getElementById('bangTheoDoi')) document.getElementById('bangTheoDoi').innerHTML = html;
     
     if(document.getElementById('bangTheoDoiFoot')) {
-        document.getElementById('bangTheoDoiFoot').innerHTML = `<tr><td colspan="5" class="text-right bold" style="font-size:15px; color:#1D6F42;">TỔNG NỢ CÒN LẠI:</td><td class="text-right text-danger bold" style="font-size:16px;">${formatTien(tongTatCaNo)}</td><td colspan="2"></td></tr>`;
+        let colSpanFoot = isAdmin ? 6 : 5;
+        let colEmpty = isAdmin ? 3 : 2;
+        document.getElementById('bangTheoDoiFoot').innerHTML = `<tr><td colspan="${colSpanFoot}" class="text-right bold" style="font-size:15px; color:#1D6F42;">TỔNG NỢ CÒN LẠI:</td><td class="text-right text-danger bold" style="font-size:16px;">${formatTien(tongTatCaNo)}</td><td colspan="${colEmpty}"></td></tr>`;
     }
 }
 
@@ -673,6 +729,7 @@ function taiMauExcelHoaDonNT() {
     XLSX.writeFile(wb, "Mau_Bang_Ke_Hoa_Don_NT.xlsx");
 }
 
+// CẬP NHẬT LẠI CSS XUẤT WORD: CHỈNH LỀ MẶC ĐỊNH CHO RỘNG RÃI
 function xuatFileWordBBNT() {
     let printDiv = document.getElementById("ban-in-nghiem-thu");
     
@@ -697,8 +754,9 @@ function xuatFileWordBBNT() {
     }
 
     let htmlContent = cloneDiv.innerHTML;
-    let preHtml = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Biên Bản Nghiệm Thu</title><style>body { font-family: 'Times New Roman', serif; font-size: 14pt; } table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid black; padding: 5px; text-align: left; } .bold-nt { font-weight: bold; }</style></head><body>";
-    let postHtml = "</body></html>";
+    // Thêm thẻ style set cứng margin cho trang Word
+    let preHtml = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Biên Bản Nghiệm Thu</title><style>@page Section1 { size: 595.3pt 841.9pt; margin: 56.7pt 56.7pt 56.7pt 56.7pt; mso-header-margin: 35.4pt; mso-footer-margin: 35.4pt; mso-paper-source: 0; } div.Section1 { page: Section1; } body { font-family: 'Times New Roman', serif; font-size: 14pt; } table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid black; padding: 5px; text-align: left; } .bold-nt { font-weight: bold; }</style></head><body><div class='Section1'>";
+    let postHtml = "</div></body></html>";
     let sourceHTML = preHtml + htmlContent + postHtml;
     
     let blob = new Blob(['\ufeff', sourceHTML], { type: 'application/msword' });
@@ -711,7 +769,6 @@ function xuatFileWordBBNT() {
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
 
-// BỔ SUNG GÁN GIÁ TRỊ CHỨC VỤ CHO BÊN A (docChucVuA_KyNT)
 function renderBenANT() {
     if(document.getElementById('docTenBenA_TitleNT')) document.getElementById('docTenBenA_TitleNT').innerText = benA.ten; 
     if(document.getElementById('docTenBenA_CCTNT')) document.getElementById('docTenBenA_CCTNT').innerText = benA.ten.toLowerCase(); 
@@ -833,6 +890,7 @@ function docFileExcelNT() {
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
+// BẢN VÁ LỖI XÓA ĐI DÒNG TỔNG CỘNG LẶP LẠI
 function renderTableDataNT() {
     let tbody = "", tong = 0;
     currentExcelDataNT.forEach(i => { 
@@ -850,10 +908,14 @@ function renderTableDataNT() {
         </tr>`; 
     });
     
-    if(currentExcelDataNT.length === 0) tbody = `<tr><td colspan="8" style="text-align:center;font-style:italic;">(Chưa có dữ liệu)</td></tr>`;
+    if(currentExcelDataNT.length === 0) {
+        tbody = `<tr><td colspan="8" style="text-align:center;font-style:italic;">(Chưa có dữ liệu)</td></tr>`;
+    } else {
+        // Cộng luôn một dòng Trực tiếp làm dòng cuối cùng của bảng thay vì dùng the tfoot
+        tbody += `<tr><td colspan="7" class="text-right bold-nt" style="padding-right: 10px;">Tổng cộng:</td><td class="text-right bold-nt">${formatTien(tong)}</td></tr>`;
+    }
     
     if(document.getElementById('chiTietHoaDonNT')) document.getElementById('chiTietHoaDonNT').innerHTML = tbody;
-    if(document.getElementById('tongTienBangSoNT')) document.getElementById('tongTienBangSoNT').innerText = formatTien(tong);
     if(document.getElementById('tongTienBangChuNT')) document.getElementById('tongTienBangChuNT').innerText = docTienBangChuNT(tong);
 }
 
