@@ -46,6 +46,10 @@ if(window.location.pathname.indexOf('login.html') === -1) {
             loadSelectOptions(); 
             loadDsHopDongNT();
             renderBangAdminHopDong();
+
+            // Nếu đang ở màn hình Thanh toán thì update lại bảng luôn
+            let ctyTT = document.getElementById('selectCongTyTT')?.value;
+            if(ctyTT) loadHopDongVaHoaDonTT();
         } else {
             db = { hopDongs: [], phuLucs: [], hoaDons: [], thanhToans: [] };
             renderTable();
@@ -142,14 +146,19 @@ $(document).ready(function() {
         }
     }
     
-    $('.search-select').select2();
+    $('.search-select').select2({ width: '100%' });
     updateDocNT();
     renderBenANT();
 
+    // Lắng nghe sự thay đổi của mục Lọc dữ liệu
     $('#filterCongTy').on('change', renderTable);
     $('#filterCongTy').on('select2:select', renderTable); 
     $('#filterThangNhap').on('change', renderTable);
     $('#filterDate').on('change', renderTable);
+
+    // Lắng nghe sự thay đổi của mục chọn Công ty để hiển thị Bảng Thanh Toán
+    $('#selectCongTyTT').on('change', loadHopDongVaHoaDonTT);
+    $('#selectCongTyTT').on('select2:select', loadHopDongVaHoaDonTT);
 });
 
 function toggleCompanySelect() {
@@ -202,12 +211,7 @@ function taoTaiKhoanHangLoat() {
 
             if(r === 'user' && !c) continue; 
 
-            usersDB[u] = {
-                password: p,
-                role: r,
-                company: r === 'admin' ? 'ALL' : c,
-                isFirstLogin: true 
-            };
+            usersDB[u] = { password: p, role: r, company: r === 'admin' ? 'ALL' : c, isFirstLogin: true };
             count++;
         }
 
@@ -227,7 +231,6 @@ function loadBangTaiKhoan() {
     let tbody = '';
     for(let key in usersDB) {
         let btnXoa = key === 'admin' ? '' : `<button onclick="xoaTaiKhoan('${key}')" style="background:#dc3545;color:white;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;">Xóa</button>`;
-        
         let passToDisplay = usersDB[key].password; 
         let trangThaiMK = usersDB[key].isFirstLogin ? '<br><span style="color:red; font-size:10px;">(Chưa đổi MK mới)</span>' : '';
 
@@ -247,9 +250,6 @@ function xoaTaiKhoan(u) {
     if(confirm(`Chắc chắn xóa tài khoản ${u}?`)) { delete usersDB[u]; saveUsers(); }
 }
 
-// ==========================================
-// TÍNH NĂNG XÓA HỢP ĐỒNG / CÔNG TY CHO ADMIN
-// ==========================================
 function renderBangAdminHopDong() {
     if(!document.getElementById('bangAdminHopDong')) return;
     let html = '';
@@ -268,7 +268,6 @@ function renderBangAdminHopDong() {
 function xoaHopDong(id) {
     let hd = db.hopDongs.find(h => h.id === id);
     if(!hd) return;
-    
     let hasInvoices = db.hoaDons.some(inv => inv.idHD === id || inv.tenCongTy === hd.tenCongTy);
     let msg = hasInvoices 
         ? `⚠️ CẢNH BÁO: Công ty [${hd.tenCongTy}] hiện đang có Hóa đơn gắn liền!\n\nNếu bạn xóa, các hóa đơn kia sẽ bị mất liên kết với hợp đồng này. Bạn vẫn chắc chắn muốn XÓA chứ?`
@@ -291,7 +290,7 @@ function xoaHoaDon(id) {
 }
 
 // ==========================================
-// 3. LOGIC QUẢN LÝ CÔNG NỢ
+// 3. LOGIC QUẢN LÝ CÔNG NỢ & THANH TOÁN
 // ==========================================
 const formatTien = (tien) => new Intl.NumberFormat('vi-VN').format(tien);
 
@@ -322,24 +321,18 @@ function themHopDong() {
     saveData(); alert("Lưu Hợp đồng thành công!");
     document.getElementById('tenCongTy').value = ''; document.getElementById('soHopDong').value = ''; document.getElementById('giaTriGoc').value = '';
 }
+
 function themPhuLuc() {
     let idHD = document.getElementById('selectHopDongPL').value, loai = document.getElementById('loaiPhuLuc').value, giaTri = Number(document.getElementById('giaTriPhuLuc').value);
     if(!idHD || !giaTri) return alert("Vui lòng chọn Hợp đồng và nhập số tiền!");
     db.phuLucs.push({ idHD: idHD, loai: loai, giaTri: giaTri }); saveData(); alert("Đã lưu Phụ lục!"); document.getElementById('giaTriPhuLuc').value = '';
 }
+
 function themHoaDon() {
     let tenCty = document.getElementById('selectCongTyHD').value, soHD = document.getElementById('soHoaDonInput').value, ngayHD = document.getElementById('ngayHoaDon').value, ngayNK = document.getElementById('ngayNhapKho').value, tien = Number(document.getElementById('tienHoaDon').value);
     if(!tenCty || !soHD || !tien) return alert("Vui lòng chọn Công ty, nhập Số hóa đơn và Số tiền!");
     db.hoaDons.push({ id: Date.now().toString(), tenCongTy: tenCty, idHD: "", soHoaDon: soHD, ngayHoaDon: ngayHD, ngayNhapKho: ngayNK, soTien: tien }); 
     saveData(); alert("Đã lưu Hóa đơn thành công!"); document.getElementById('soHoaDonInput').value = ''; document.getElementById('tienHoaDon').value = '';
-}
-function themThanhToan() {
-    let idHoaDon = document.getElementById('selectHoaDonTT').value, idHopDong = document.getElementById('selectHopDongTT').value, tien = document.getElementById('tienThanhToan').value, ngay = document.getElementById('ngayThanhToan').value;
-    if(!idHoaDon || !idHopDong) return alert("Vui lòng chọn Hóa đơn và Hợp đồng!");
-    let inv = db.hoaDons.find(h => h.id === idHoaDon);
-    if(inv) inv.idHD = idHopDong;
-    if(tien && ngay) db.thanhToans.push({ idHoaDon: idHoaDon, soTien: Number(tien), ngay: ngay });
-    saveData(); alert("Cập nhật thông tin thành công!"); loadHopDongVaHoaDonTT(); 
 }
 
 function parseExcelDate(val) {
@@ -394,24 +387,104 @@ function loadSelectOptions() {
     if(document.getElementById('selectHopDongPL')) document.getElementById('selectHopDongPL').innerHTML = optHDPL;
     
     if(document.getElementById('filterCongTy')) document.getElementById('filterCongTy').innerHTML = '<option value="ALL">-- Tất cả công ty --</option>' + optCty;
-    
-    let selUserCty = document.getElementById('newUserCompany');
-    if(selUserCty) selUserCty.innerHTML = optCty;
+    if(document.getElementById('newUserCompany')) document.getElementById('newUserCompany').innerHTML = optCty;
 }
 
+// ------------------------------------------------------------------
+// BẢNG DANH SÁCH THANH TOÁN MỚI
+// ------------------------------------------------------------------
 function loadHopDongVaHoaDonTT() {
     let cty = document.getElementById('selectCongTyTT')?.value;
-    if(!cty) return;
-    let optHD = '<option value="">-- Chọn Hợp đồng để gán --</option>';
-    db.hopDongs.filter(hd => hd.tenCongTy === cty).forEach(hd => { optHD += `<option value="${hd.id}">HĐ: ${hd.soHopDong}</option>`; });
-    document.getElementById('selectHopDongTT').innerHTML = optHD;
+    let container = document.getElementById('khuVucDanhSachThanhToan');
+    
+    if(!container) return; // Nếu giao diện chưa cập nhật div thì bỏ qua
 
-    let optInv = '<option value="">-- Chọn Hóa đơn --</option>';
-    db.hoaDons.filter(h => h.tenCongTy === cty).forEach(hd => {
-        let textTT = db.thanhToans.some(tt => tt.idHoaDon === hd.id) ? 'Đã TT' : `Nợ: ${formatTien(hd.soTien)}`;
-        optInv += `<option value="${hd.id}">HĐơn: ${hd.soHoaDon} - ${textTT}</option>`;
+    if(!cty) {
+        container.innerHTML = '<p style="color: #888; font-style: italic; text-align: center; margin-top: 10px;">Vui lòng chọn công ty ở trên để hiển thị hóa đơn.</p>';
+        return;
+    }
+
+    let normCty = cty.trim().toUpperCase();
+    let dsHoaDon = db.hoaDons.filter(h => (h.tenCongTy || '').trim().toUpperCase() === normCty);
+
+    if(dsHoaDon.length === 0) {
+        container.innerHTML = `<p style="text-align:center; color:#dc3545; font-weight:bold; margin-top:10px;">Công ty này hiện chưa có hóa đơn nào!</p>`;
+        return;
+    }
+
+    // Sắp xếp: Hóa đơn chưa thanh toán lên trên, đã thanh toán xuống dưới
+    dsHoaDon.sort((a, b) => {
+        let aPaid = db.thanhToans.some(t => t.idHoaDon === a.id);
+        let bPaid = db.thanhToans.some(t => t.idHoaDon === b.id);
+        return (aPaid === bPaid) ? 0 : aPaid ? 1 : -1;
     });
-    document.getElementById('selectHoaDonTT').innerHTML = optInv;
+
+    let html = `
+    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <thead style="background-color: #007bff; color: white;">
+            <tr>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align:center;">Số HĐ</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align:center;">Ngày HĐ</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align:right;">Số Tiền (VNĐ)</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align:center;">Ngày TT</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align:center;">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+    `;
+
+    dsHoaDon.forEach(hd => {
+        let tt = db.thanhToans.find(t => t.idHoaDon === hd.id);
+        
+        if(tt) {
+            html += `
+            <tr style="background-color: #e8f5e9;">
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:center; font-weight:bold;">${hd.soHoaDon}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">${formatDate(hd.ngayHoaDon)}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:right;">${formatTien(hd.soTien)}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:center; color:#28a745; font-weight:bold;">${formatDate(tt.ngay)}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">
+                    <span style="color:#28a745; font-weight:bold;">Đã hoàn tất</span>
+                </td>
+            </tr>`;
+        } else {
+            html += `
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:center; font-weight:bold;">${hd.soHoaDon}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">${formatDate(hd.ngayHoaDon)}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:right; color:#dc3545; font-weight:bold;">${formatTien(hd.soTien)}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">
+                    <input type="date" id="ngay_tt_${hd.id}" style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;">
+                </td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">
+                    <button onclick="luuThanhToanToanBo('${hd.id}')" style="background:#28a745; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer; font-weight:bold; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">✔️ Xong</button>
+                </td>
+            </tr>`;
+        }
+    });
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+}
+
+function luuThanhToanToanBo(idHoaDon) {
+    let ngayInput = document.getElementById(`ngay_tt_${idHoaDon}`).value;
+    if(!ngayInput) return alert("Vui lòng chọn Ngày Thanh Toán!");
+
+    let hd = db.hoaDons.find(h => h.id === idHoaDon);
+    if(!hd) return alert("Lỗi: Không tìm thấy hóa đơn!");
+
+    if(confirm(`Xác nhận đối tác đã thanh toán TOÀN BỘ giá trị (${formatTien(hd.soTien)} VNĐ) cho Hóa đơn số ${hd.soHoaDon}?`)) {
+        db.thanhToans.push({ 
+            idHoaDon: idHoaDon, 
+            soTien: Number(hd.soTien), 
+            ngay: ngayInput 
+        });
+        
+        saveData(); 
+        alert("✅ Đã ghi nhận thanh toán thành công!");
+        loadHopDongVaHoaDonTT(); // Làm mới lại bảng
+    }
 }
 
 function luuNhanhSoHD(idHoaDon) {
@@ -729,7 +802,6 @@ function taiMauExcelHoaDonNT() {
     XLSX.writeFile(wb, "Mau_Bang_Ke_Hoa_Don_NT.xlsx");
 }
 
-// CẬP NHẬT LẠI CSS XUẤT WORD: CHỈNH LỀ MẶC ĐỊNH CHO RỘNG RÃI
 function xuatFileWordBBNT() {
     let printDiv = document.getElementById("ban-in-nghiem-thu");
     
@@ -754,7 +826,6 @@ function xuatFileWordBBNT() {
     }
 
     let htmlContent = cloneDiv.innerHTML;
-    // Thêm thẻ style set cứng margin cho trang Word
     let preHtml = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Biên Bản Nghiệm Thu</title><style>@page Section1 { size: 595.3pt 841.9pt; margin: 56.7pt 56.7pt 56.7pt 56.7pt; mso-header-margin: 35.4pt; mso-footer-margin: 35.4pt; mso-paper-source: 0; } div.Section1 { page: Section1; } body { font-family: 'Times New Roman', serif; font-size: 14pt; } table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid black; padding: 5px; text-align: left; } .bold-nt { font-weight: bold; }</style></head><body><div class='Section1'>";
     let postHtml = "</div></body></html>";
     let sourceHTML = preHtml + htmlContent + postHtml;
@@ -890,7 +961,6 @@ function docFileExcelNT() {
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
-// BẢN VÁ LỖI XÓA ĐI DÒNG TỔNG CỘNG LẶP LẠI
 function renderTableDataNT() {
     let tbody = "", tong = 0;
     currentExcelDataNT.forEach(i => { 
@@ -911,7 +981,6 @@ function renderTableDataNT() {
     if(currentExcelDataNT.length === 0) {
         tbody = `<tr><td colspan="8" style="text-align:center;font-style:italic;">(Chưa có dữ liệu)</td></tr>`;
     } else {
-        // Cộng luôn một dòng Trực tiếp làm dòng cuối cùng của bảng thay vì dùng the tfoot
         tbody += `<tr><td colspan="7" class="text-right bold-nt" style="padding-right: 10px;">Tổng cộng:</td><td class="text-right bold-nt">${formatTien(tong)}</td></tr>`;
     }
     
