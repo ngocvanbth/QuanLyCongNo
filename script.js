@@ -304,7 +304,7 @@ function switchTab(tabId, btn) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    btn.classList.add('active');
+    if(btn) btn.classList.add('active');
     
     $('.search-select').select2({ width: '100%' });
 
@@ -391,13 +391,13 @@ function loadSelectOptions() {
 }
 
 // ------------------------------------------------------------------
-// BẢNG DANH SÁCH THANH TOÁN MỚI
+// BẢNG DANH SÁCH THANH TOÁN MỚI (CÓ CHECKBOX CHỌN NHIỀU)
 // ------------------------------------------------------------------
 function loadHopDongVaHoaDonTT() {
     let cty = document.getElementById('selectCongTyTT')?.value;
     let container = document.getElementById('khuVucDanhSachThanhToan');
     
-    if(!container) return; // Nếu giao diện chưa cập nhật div thì bỏ qua
+    if(!container) return;
 
     if(!cty) {
         container.innerHTML = '<p style="color: #888; font-style: italic; text-align: center; margin-top: 10px;">Vui lòng chọn công ty ở trên để hiển thị hóa đơn.</p>';
@@ -412,7 +412,6 @@ function loadHopDongVaHoaDonTT() {
         return;
     }
 
-    // Sắp xếp: Hóa đơn chưa thanh toán lên trên, đã thanh toán xuống dưới
     dsHoaDon.sort((a, b) => {
         let aPaid = db.thanhToans.some(t => t.idHoaDon === a.id);
         let bPaid = db.thanhToans.some(t => t.idHoaDon === b.id);
@@ -423,15 +422,17 @@ function loadHopDongVaHoaDonTT() {
     <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
         <thead style="background-color: #007bff; color: white;">
             <tr>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align:center; width: 50px;">Chọn</th>
                 <th style="padding: 8px; border: 1px solid #ddd; text-align:center;">Số HĐ</th>
                 <th style="padding: 8px; border: 1px solid #ddd; text-align:center;">Ngày HĐ</th>
                 <th style="padding: 8px; border: 1px solid #ddd; text-align:right;">Số Tiền (VNĐ)</th>
-                <th style="padding: 8px; border: 1px solid #ddd; text-align:center;">Ngày TT</th>
-                <th style="padding: 8px; border: 1px solid #ddd; text-align:center;">Thao tác</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align:center;">Tình trạng</th>
             </tr>
         </thead>
         <tbody>
     `;
+
+    let hasUnpaid = false;
 
     dsHoaDon.forEach(hd => {
         let tt = db.thanhToans.find(t => t.idHoaDon === hd.id);
@@ -439,51 +440,91 @@ function loadHopDongVaHoaDonTT() {
         if(tt) {
             html += `
             <tr style="background-color: #e8f5e9;">
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">-</td>
                 <td style="padding: 8px; border: 1px solid #ddd; text-align:center; font-weight:bold;">${hd.soHoaDon}</td>
                 <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">${formatDate(hd.ngayHoaDon)}</td>
                 <td style="padding: 8px; border: 1px solid #ddd; text-align:right;">${formatTien(hd.soTien)}</td>
-                <td style="padding: 8px; border: 1px solid #ddd; text-align:center; color:#28a745; font-weight:bold;">${formatDate(tt.ngay)}</td>
                 <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">
-                    <span style="color:#28a745; font-weight:bold;">Đã hoàn tất</span>
+                    <span style="color:#28a745; font-weight:bold;">Đã TT (${formatDate(tt.ngay)})</span>
                 </td>
             </tr>`;
         } else {
+            hasUnpaid = true;
             html += `
             <tr>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">
+                    <input type="checkbox" class="chk-thanh-toan" value="${hd.id}" data-tien="${hd.soTien}" onchange="tinhTongTienChon()" style="transform: scale(1.3); cursor: pointer;">
+                </td>
                 <td style="padding: 8px; border: 1px solid #ddd; text-align:center; font-weight:bold;">${hd.soHoaDon}</td>
                 <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">${formatDate(hd.ngayHoaDon)}</td>
                 <td style="padding: 8px; border: 1px solid #ddd; text-align:right; color:#dc3545; font-weight:bold;">${formatTien(hd.soTien)}</td>
-                <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">
-                    <input type="date" id="ngay_tt_${hd.id}" style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;">
-                </td>
-                <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">
-                    <button onclick="luuThanhToanToanBo('${hd.id}')" style="background:#28a745; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer; font-weight:bold; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">✔️ Xong</button>
-                </td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align:center; color:#dc3545;">Chưa TT</td>
             </tr>`;
         }
     });
 
     html += `</tbody></table>`;
+
+    if(hasUnpaid) {
+        html += `
+        <div style="margin-top: 15px; padding: 12px; background: #f4f8fb; border: 1px solid #b8daff; border-radius: 5px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <span style="font-size: 15px;">Tổng tiền đang chọn: 
+                    <strong id="tongTienChonDisplay" style="color: #dc3545; font-size: 18px; margin-left: 5px;">0</strong> <strong>VNĐ</strong>
+                </span>
+            </div>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label style="margin: 0; font-weight: bold;">Ngày thanh toán:</label>
+                    <input type="date" id="ngayThanhToanChung" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px; outline: none;">
+                </div>
+                <button onclick="luuThanhToanHangLoat()" style="background:#1D6F42; color:white; border:none; padding:8px 20px; border-radius:4px; cursor:pointer; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">✔️ LƯU THANH TOÁN</button>
+            </div>
+        </div>`;
+    }
+
     container.innerHTML = html;
 }
 
-function luuThanhToanToanBo(idHoaDon) {
-    let ngayInput = document.getElementById(`ngay_tt_${idHoaDon}`).value;
-    if(!ngayInput) return alert("Vui lòng chọn Ngày Thanh Toán!");
+function tinhTongTienChon() {
+    let checkboxes = document.querySelectorAll('.chk-thanh-toan:checked');
+    let tong = 0;
+    checkboxes.forEach(chk => {
+        tong += parseFloat(chk.getAttribute('data-tien')) || 0;
+    });
+    document.getElementById('tongTienChonDisplay').innerText = formatTien(tong);
+}
 
-    let hd = db.hoaDons.find(h => h.id === idHoaDon);
-    if(!hd) return alert("Lỗi: Không tìm thấy hóa đơn!");
+function luuThanhToanHangLoat() {
+    let checkboxes = document.querySelectorAll('.chk-thanh-toan:checked');
+    
+    if (checkboxes.length === 0) {
+        return alert("Vui lòng tích chọn ít nhất một hóa đơn để thanh toán!");
+    }
 
-    if(confirm(`Xác nhận đối tác đã thanh toán TOÀN BỘ giá trị (${formatTien(hd.soTien)} VNĐ) cho Hóa đơn số ${hd.soHoaDon}?`)) {
-        db.thanhToans.push({ 
-            idHoaDon: idHoaDon, 
-            soTien: Number(hd.soTien), 
-            ngay: ngayInput 
+    let ngayInput = document.getElementById('ngayThanhToanChung').value;
+    if (!ngayInput) {
+        return alert("Vui lòng nhập Ngày thanh toán!");
+    }
+
+    let tongTien = document.getElementById('tongTienChonDisplay').innerText;
+
+    if(confirm(`Bạn có chắc chắn muốn ghi nhận ĐÃ THANH TOÁN cho ${checkboxes.length} hóa đơn được chọn?\n\nTổng số tiền: ${tongTien} VNĐ\nNgày thanh toán: ${formatDate(ngayInput)}`)) {
+        
+        checkboxes.forEach(chk => {
+            let idHoaDon = chk.value;
+            let soTien = parseFloat(chk.getAttribute('data-tien'));
+            
+            db.thanhToans.push({ 
+                idHoaDon: idHoaDon, 
+                soTien: soTien, 
+                ngay: ngayInput 
+            });
         });
         
         saveData(); 
         alert("✅ Đã ghi nhận thanh toán thành công!");
-        loadHopDongVaHoaDonTT(); // Làm mới lại bảng
+        loadHopDongVaHoaDonTT(); 
     }
 }
 
@@ -645,7 +686,7 @@ function inBaoCaoTongHop() {
         <div class="print-container">
             <table class="header-table">
                 <tr>
-                    <td width="50%" class="text-center"><strong>TRUNG TÂM Y TẾ H. HÀM THUẬN BẮC</strong><br>PHÒNG TÀI CHÍNH KẾ TOÁN</td>
+                    <td width="50%" class="text-center"><strong>TRUNG TÂM Y TẾ KHU VỰC HÀM THUẬN BẮC</strong><br>PHÒNG TÀI CHÍNH KẾ TOÁN</td>
                     <td class="text-center"><strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><br>Độc lập - Tự do - Hạnh phúc</td>
                 </tr>
             </table>
@@ -729,7 +770,7 @@ function inBaoCaoChiTiet() {
         <div class="print-container">
             <table class="header-table">
                 <tr>
-                    <td width="50%" class="text-center"><strong>TRUNG TÂM Y TẾ H. HÀM THUẬN BẮC</strong><br>PHÒNG TÀI CHÍNH KẾ TOÁN</td>
+                    <td width="50%" class="text-center"><strong>TRUNG TÂM Y TẾ KHU VỰC HÀM THUẬN BẮC</strong><br>PHÒNG TÀI CHÍNH KẾ TOÁN</td>
                     <td class="text-center"><strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><br>Độc lập - Tự do - Hạnh phúc</td>
                 </tr>
             </table>
