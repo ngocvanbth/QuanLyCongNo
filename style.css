@@ -134,3 +134,27 @@ tbody tr:hover {
     60% { transform: rotate( 0.0deg) }
     100% { transform: rotate( 0.0deg) }
 }
+/* Tạo hiệu ứng chuyển động đổi màu */
+@keyframes cauVongNhapNhay {
+    0%   { color: #ff0000; } /* Đỏ */
+    20%  { color: #ff8000; } /* Cam */
+    40%  { color: #ffff00; } /* Vàng */
+    60%  { color: #00ff00; } /* Xanh lá */
+    80%  { color: #0000ff; } /* Xanh dương */
+    100% { color: #8b00ff; } /* Tím */
+}
+
+.copyright-van {
+    font-weight: bold;
+    font-size: 14px;
+    /* Áp dụng hiệu ứng: tên hiệu ứng | thời gian 3 giây | chạy vô tận | mượt mà */
+    animation: cauVongNhapNhay 3s linear infinite;
+    display: inline-block;
+    transition: 0.3s;
+}
+
+/* Hiệu ứng khi rế chuột vào sẽ hơi to lên một chút */
+.copyright-van:hover {
+    transform: scale(1.1);
+    cursor: default;
+}
