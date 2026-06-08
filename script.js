@@ -127,7 +127,8 @@ function luuMatKhauMoi() {
 $(document).ready(function() {
     if(currentUser) {
         document.getElementById('currentUserName').innerText = currentUser.username.toUpperCase();
-        document.getElementById('currentUserRole').innerText = currentUser.role === 'admin' ? '[Quản trị TTYT]' : `[Đối tác: ${currentUser.company}]`;
+        let roleName = currentUser.role === 'admin' ? '[Quản trị TTYT]' : (currentUser.role === 'nhapkho' ? '[Thủ Kho]' : `[Đối tác: ${currentUser.company}]`);
+        document.getElementById('currentUserRole').innerText = roleName;
 
         if(currentUser.role === 'user') {
             document.getElementById('btn-tab-hop-dong').style.display = 'none';
@@ -141,6 +142,18 @@ $(document).ready(function() {
             document.getElementById('inpTenBenBNT').disabled = true;
 
             switchTab('tab-theo-doi', document.getElementById('btn-tab-theo-doi'));
+            
+        } else if(currentUser.role === 'nhapkho') {
+            document.getElementById('btn-tab-hop-dong').style.display = 'none';
+            document.getElementById('btn-tab-theo-doi').style.display = 'none';
+            document.getElementById('btn-tab-nghiem-thu').style.display = 'none';
+            document.getElementById('btn-tab-admin').style.display = 'none';
+            
+            let boxTT = document.getElementById('box-xac-nhan-thanh-toan');
+            if(boxTT) boxTT.style.display = 'none';
+            
+            switchTab('tab-hoa-don', document.getElementById('btn-tab-hoa-don'));
+            
         } else {
             document.getElementById('khuVucCapNhatBenA').style.display = 'block';
         }
@@ -162,7 +175,7 @@ $(document).ready(function() {
 });
 
 function toggleCompanySelect() {
-    document.getElementById('divSelectCompany').style.display = document.getElementById('newRole').value === 'admin' ? 'none' : 'block';
+    document.getElementById('divSelectCompany').style.display = document.getElementById('newRole').value === 'admin' || document.getElementById('newRole').value === 'nhapkho' ? 'none' : 'block';
 }
 
 function taoTaiKhoan() {
@@ -174,7 +187,7 @@ function taoTaiKhoan() {
     if(!u || !p) return alert("Vui lòng nhập đủ tên đăng nhập và mật khẩu!");
     if(r === 'user' && !c) return alert("Vui lòng chọn Công ty cho tài khoản đối tác!");
 
-    usersDB[u] = { password: p, role: r, company: r === 'admin' ? 'ALL' : c, isFirstLogin: true };
+    usersDB[u] = { password: p, role: r, company: r === 'admin' || r === 'nhapkho' ? 'ALL' : c, isFirstLogin: true };
     saveUsers();
     alert("Đã tạo tài khoản thành công!");
     document.getElementById('newUsername').value = ''; document.getElementById('newPassword').value = '';
@@ -182,9 +195,10 @@ function taoTaiKhoan() {
 
 function taiMauExcelTaiKhoan() {
     let ws = XLSX.utils.aoa_to_sheet([
-        ["Tên đăng nhập (Viết liền không dấu)", "Mật khẩu", "Quyền hạn (user/admin)", "Tên Công ty quản lý (Chính xác tên Cty)"],
+        ["Tên đăng nhập (Viết liền không dấu)", "Mật khẩu", "Quyền hạn (user/admin/nhapkho)", "Tên Công ty quản lý (Chính xác tên Cty)"],
         ["doitac_cpc1", "123456", "user", "Công ty Cổ phần Dược phẩm CPC1 Hà Nội"],
-        ["ketoan_admin", "123456", "admin", "ALL"]
+        ["ketoan_admin", "123456", "admin", "ALL"],
+        ["thukho_01", "123456", "nhapkho", "ALL"]
     ]);
     let wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "TaoTaiKhoan");
@@ -206,12 +220,13 @@ function taoTaiKhoanHangLoat() {
 
             let u = row[0].toString().trim().toLowerCase();
             let p = row[1].toString();
-            let r = (row[2] && row[2].toString().toLowerCase() === 'admin') ? 'admin' : 'user';
+            let rText = (row[2] ? row[2].toString().toLowerCase() : '');
+            let r = (rText === 'admin') ? 'admin' : (rText === 'nhapkho' ? 'nhapkho' : 'user');
             let c = row[3] ? row[3].toString().trim() : '';
 
             if(r === 'user' && !c) continue; 
 
-            usersDB[u] = { password: p, role: r, company: r === 'admin' ? 'ALL' : c, isFirstLogin: true };
+            usersDB[u] = { password: p, role: r, company: r === 'admin' || r === 'nhapkho' ? 'ALL' : c, isFirstLogin: true };
             count++;
         }
 
@@ -233,11 +248,12 @@ function loadBangTaiKhoan() {
         let btnXoa = key === 'admin' ? '' : `<button onclick="xoaTaiKhoan('${key}')" style="background:#dc3545;color:white;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;">Xóa</button>`;
         let passToDisplay = usersDB[key].password; 
         let trangThaiMK = usersDB[key].isFirstLogin ? '<br><span style="color:red; font-size:10px;">(Chưa đổi MK mới)</span>' : '';
+        let roleName = usersDB[key].role === 'admin' ? "Quản trị" : (usersDB[key].role === 'nhapkho' ? "Thủ kho" : "Đối tác");
 
         tbody += `<tr>
             <td>${key}</td>
             <td style="color:#0056b3; font-weight:bold;">${passToDisplay} ${trangThaiMK}</td>
-            <td>${usersDB[key].role}</td>
+            <td>${roleName}</td>
             <td>${usersDB[key].company}</td>
             <td class="text-center">${btnXoa}</td>
         </tr>`;
@@ -266,6 +282,7 @@ function renderBangAdminHopDong() {
 }
 
 function xoaHopDong(id) {
+    if(currentUser.role === 'nhapkho') return alert("Tài khoản Thủ kho không được xóa dữ liệu!");
     let hd = db.hopDongs.find(h => h.id === id);
     if(!hd) return;
     let hasInvoices = db.hoaDons.some(inv => inv.idHD === id || inv.tenCongTy === hd.tenCongTy);
@@ -281,6 +298,7 @@ function xoaHopDong(id) {
 }
 
 function xoaHoaDon(id) {
+    if(currentUser.role === 'nhapkho') return alert("Tài khoản Thủ kho không được xóa dữ liệu!");
     if(confirm("⚠️ BẠN CÓ CHẮC CHẮN MUỐN XÓA HÓA ĐƠN NÀY?\n\nDữ liệu sẽ bị xóa vĩnh viễn và không thể khôi phục!")) {
         db.hoaDons = db.hoaDons.filter(h => h.id !== id);
         db.thanhToans = db.thanhToans.filter(t => t.idHoaDon !== id); 
@@ -313,6 +331,7 @@ function switchTab(tabId, btn) {
 }
 
 function themHopDong() {
+    if(currentUser.role === 'nhapkho') return alert("Tài khoản Thủ kho không có quyền thực hiện chức năng này!");
     let ten = document.getElementById('tenCongTy').value.trim();
     let soHD = document.getElementById('soHopDong').value.trim();
     let giaTri = Number(document.getElementById('giaTriGoc').value);
@@ -323,6 +342,7 @@ function themHopDong() {
 }
 
 function themPhuLuc() {
+    if(currentUser.role === 'nhapkho') return alert("Tài khoản Thủ kho không có quyền thực hiện chức năng này!");
     let idHD = document.getElementById('selectHopDongPL').value, loai = document.getElementById('loaiPhuLuc').value, giaTri = Number(document.getElementById('giaTriPhuLuc').value);
     if(!idHD || !giaTri) return alert("Vui lòng chọn Hợp đồng và nhập số tiền!");
     db.phuLucs.push({ idHD: idHD, loai: loai, giaTri: giaTri }); saveData(); alert("Đã lưu Phụ lục!"); document.getElementById('giaTriPhuLuc').value = '';
@@ -352,6 +372,7 @@ function parseExcelDate(val) {
 }
 
 function nhapTuExcel() {
+    if(currentUser.role === 'nhapkho') return alert("Tài khoản Thủ kho chỉ được phép nhập lẻ hóa đơn!");
     let fileInput = document.getElementById('fileExcel');
     if(!fileInput.files.length) return alert("Vui lòng chọn file Excel trước!");
     let reader = new FileReader();
@@ -496,6 +517,7 @@ function tinhTongTienChon() {
 }
 
 function luuThanhToanHangLoat() {
+    if(currentUser.role === 'nhapkho') return alert("Tài khoản Thủ kho không có quyền thực hiện chức năng này!");
     let checkboxes = document.querySelectorAll('.chk-thanh-toan:checked');
     
     if (checkboxes.length === 0) {
@@ -1145,4 +1167,104 @@ function inBienBanNghiemThu() {
     let content = document.getElementById('ban-in-nghiem-thu').innerHTML;
     document.getElementById('print-section').innerHTML = `<div class="a4-container-nt">${content}</div>`;
     window.print();
+}
+
+// ==========================================
+// TÍNH NĂNG THÊM NHANH CÔNG TY (Admin & Nhapkho)
+// ==========================================
+function hienThiModalThemCongTy() {
+    if(currentUser.role !== 'admin' && currentUser.role !== 'nhapkho') return alert("Bạn không có quyền thêm công ty mới!");
+    document.getElementById('modalThemCongTy').style.display = 'flex';
+    document.getElementById('newCompanyName').value = '';
+    document.getElementById('newCompanyName').focus();
+}
+
+function dongModalThemCongTy() {
+    document.getElementById('modalThemCongTy').style.display = 'none';
+}
+
+function luuCongTyMoi() {
+    if(currentUser.role !== 'admin' && currentUser.role !== 'nhapkho') return;
+    
+    let tenCtyMoi = document.getElementById('newCompanyName').value.trim();
+    if(!tenCtyMoi) return alert("Vui lòng nhập tên công ty!");
+    
+    let normCty = tenCtyMoi.toUpperCase();
+    let exists = db.hopDongs.find(hd => (hd.tenCongTy || '').trim().toUpperCase() === normCty);
+    
+    if(exists) return alert("Công ty này đã có trong hệ thống!");
+    
+    db.hopDongs.push({ id: 'HD_NHAPKHO_' + Date.now(), tenCongTy: tenCtyMoi, soHopDong: 'Chưa có', giaTriGoc: 0 });
+    saveData();
+    loadSelectOptions();
+    
+    $('#selectCongTyHD').val(tenCtyMoi).trigger('change');
+    alert("✅ Thêm công ty mới thành công!");
+    dongModalThemCongTy();
+}
+
+// ==========================================
+// TÍNH NĂNG XUẤT PDF HÓA ĐƠN NHẬP KHO
+// ==========================================
+function xuatPDFNhapKho() {
+    if(currentUser.role !== 'admin' && currentUser.role !== 'nhapkho') return alert("Bạn không có quyền xuất báo cáo này!");
+
+    let tuNgay = document.getElementById('pdfTuNgay').value;
+    let denNgay = document.getElementById('pdfDenNgay').value;
+
+    if(!tuNgay || !denNgay) return alert("Vui lòng chọn đầy đủ Từ ngày và Đến ngày!");
+    if(tuNgay > denNgay) return alert("Từ ngày không được lớn hơn Đến ngày!");
+
+    let filtered = db.hoaDons.filter(hd => hd.ngayNhapKho && hd.ngayNhapKho >= tuNgay && hd.ngayNhapKho <= denNgay);
+    if(filtered.length === 0) return alert("Không có hóa đơn nhập kho nào trong khoảng thời gian này!");
+
+    filtered.sort((a, b) => new Date(a.ngayNhapKho) - new Date(b.ngayNhapKho));
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('landscape');
+    
+    doc.setFontSize(16);
+    doc.text("DANH SACH HOA DON NHAP KHO", doc.internal.pageSize.getWidth() / 2, 15, { align: "center" });
+    doc.setFontSize(11);
+    
+    let dateStrTu = new Date(tuNgay).toLocaleDateString('vi-VN');
+    let dateStrDen = new Date(denNgay).toLocaleDateString('vi-VN');
+    doc.text(`Tu ngay: ${dateStrTu} - Den ngay: ${dateStrDen}`, 14, 25);
+    doc.text(`Ngay xuat bao cao: ${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}`, 14, 31);
+
+    let tableColumn = ["STT", "Ten cong ty", "So hoa don", "Ngay hoa don", "Ngay nhap kho", "So tien (VND)"];
+    let tableRows = [];
+    let totalValue = 0;
+
+    filtered.forEach((hd, index) => {
+        totalValue += hd.soTien;
+        let pNgayHD = hd.ngayHoaDon ? new Date(hd.ngayHoaDon).toLocaleDateString('vi-VN') : '';
+        let pNgayNK = hd.ngayNhapKho ? new Date(hd.ngayNhapKho).toLocaleDateString('vi-VN') : '';
+        
+        let safeCty = hd.tenCongTy.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
+        
+        tableRows.push([ index + 1, safeCty, hd.soHoaDon, pNgayHD, pNgayNK, formatTien(hd.soTien) ]);
+    });
+
+    doc.autoTable({
+        startY: 35,
+        head: [tableColumn],
+        body: tableRows,
+        styles: { fontStyle: "normal", fontSize: 10, cellPadding: 3 },
+        headStyles: { fillColor: [0, 86, 179], textColor: [255, 255, 255], halign: 'center' },
+        columnStyles: { 0: { halign: 'center', cellWidth: 15 }, 1: { cellWidth: 100 }, 5: { halign: 'right' } },
+        margin: { top: 10, right: 14, bottom: 20, left: 14 },
+        didDrawPage: function (data) {
+            doc.setFontSize(10);
+            doc.text("Trang " + doc.internal.getNumberOfPages(), data.settings.margin.left, doc.internal.pageSize.getHeight() - 10);
+        }
+    });
+
+    let finalY = doc.lastAutoTable.finalY || 45;
+    doc.setFontSize(12); doc.setFont(undefined, 'bold');
+    doc.text(`Tong so hoa don: ${filtered.length}`, 14, finalY + 10);
+    doc.text(`Tong gia tri: ${formatTien(totalValue)} dong`, doc.internal.pageSize.getWidth() - 14, finalY + 10, { align: "right" });
+
+    doc.autoPrint();
+    window.open(doc.output('bloburl'), '_blank');
 }

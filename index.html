@@ -9,6 +9,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
     <link rel="stylesheet" href="style.css">
 
     <style>
@@ -40,7 +44,7 @@
 </div>
 
 <div class="container" id="main-ui" style="margin-top: 15px;">
-    <h2>Hệ Thống Quản Lý & Đối Chiếu Công Nợ</h2>
+    <h2 class="main-title">PHẦN MỀM ĐỐI CHIẾU CÔNG NỢ VÀ HỒ SƠ THANH TOÁN</h2>
     
     <div class="tabs">
         <button class="tab-btn active" id="btn-tab-hop-dong" onclick="switchTab('tab-hop-dong', this)">1. Hợp Đồng</button>
@@ -73,7 +77,13 @@
         <div class="grid-2">
             <div class="form-box">
                 <h3>Nhập Lẻ Hóa Đơn</h3>
-                <div class="form-group"><label>Công ty</label><select id="selectCongTyHD" class="search-select"></select></div>
+                <div class="form-group">
+                    <label>Công ty</label>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="selectCongTyHD" class="search-select" style="flex: 1;"></select>
+                        <button class="btn btn-warning" onclick="hienThiModalThemCongTy()" style="padding: 0 15px; font-size: 13px; white-space: nowrap;">+ Thêm công ty</button>
+                    </div>
+                </div>
                 <div class="form-group"><label>Số HĐ</label><input type="text" id="soHoaDonInput"></div>
                 <div class="grid-2">
                     <div class="form-group"><label>Ngày Hóa đơn</label><input type="date" id="ngayHoaDon"></div>
@@ -82,23 +92,32 @@
                 <div class="form-group"><label>Số tiền</label><input type="number" id="tienHoaDon"></div>
                 <button class="btn" onclick="themHoaDon()">Lưu</button>
             </div>
-            <div class="form-box">
-    <h3>Xác Nhận Thanh Toán Hóa Đơn</h3>
-    
-    <div class="form-group">
-        <label>Chọn Công ty / Đối tác</label>
-        <select id="selectCongTyTT" class="search-select" style="width: 100%;"></select>
-    </div>
+            <div class="form-box" id="box-xac-nhan-thanh-toan">
+                <h3>Xác Nhận Thanh Toán Hóa Đơn</h3>
+                
+                <div class="form-group">
+                    <label>Chọn Công ty / Đối tác</label>
+                    <select id="selectCongTyTT" class="search-select" style="width: 100%;"></select>
+                </div>
 
-    <div class="form-group" style="margin-top: 15px;">
-        <label style="font-weight: bold; color: #0056b3;">Danh sách Hóa đơn cần xử lý:</label>
-        <div id="khuVucDanhSachThanhToan" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px; background: #fafafa;">
-            <p style="color: #888; font-style: italic; text-align: center; margin-top: 10px;">Vui lòng chọn công ty ở trên để hiển thị danh sách hóa đơn.</p>
-        </div>
-    </div>
-</div>
+                <div class="form-group" style="margin-top: 15px;">
+                    <label style="font-weight: bold; color: #0056b3;">Danh sách Hóa đơn cần xử lý:</label>
+                    <div id="khuVucDanhSachThanhToan" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px; background: #fafafa;">
+                        <p style="color: #888; font-style: italic; text-align: center; margin-top: 10px;">Vui lòng chọn công ty ở trên để hiển thị danh sách hóa đơn.</p>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="form-box" style="border-left: 5px solid #1D6F42;"><input type="file" id="fileExcel" accept=".xlsx, .xls" style="width:100%;"><button class="btn btn-excel" onclick="nhapTuExcel()">Tải Hàng Loạt Hóa Đơn (Excel)</button></div>
+        
+        <div class="form-box" id="box-xuat-pdf-nhap-kho" style="margin-top: 20px; border-left: 5px solid #17a2b8;">
+            <h3 style="color: #17a2b8;">📄 Xuất PDF Hóa Đơn Nhập Kho</h3>
+            <div class="grid-2">
+                <div class="form-group"><label>Từ ngày nhập kho</label><input type="date" id="pdfTuNgay"></div>
+                <div class="form-group"><label>Đến ngày nhập kho</label><input type="date" id="pdfDenNgay"></div>
+            </div>
+            <button class="btn" onclick="xuatPDFNhapKho()" style="width: 100%; background: #17a2b8; color: white; font-weight: bold; font-size: 15px;">📥 XUẤT PDF & IN</button>
+        </div>
     </div>
 
     <div id="tab-theo-doi" class="tab-content">
@@ -310,7 +329,11 @@
                 <div class="form-group"><label>Mật khẩu</label><input type="text" id="newPassword"></div>
                 <div class="form-group">
                     <label>Quyền hạn</label>
-                    <select id="newRole" onchange="toggleCompanySelect()"><option value="user">Tài khoản con (Đối tác)</option><option value="admin">Quản trị viên (Kế toán TTYT)</option></select>
+                    <select id="newRole" onchange="toggleCompanySelect()">
+                        <option value="user">Tài khoản con (Đối tác)</option>
+                        <option value="admin">Quản trị viên (Kế toán TTYT)</option>
+                        <option value="nhapkho">Thủ kho (Chỉ nhập hóa đơn)</option>
+                    </select>
                 </div>
                 <div class="form-group" id="divSelectCompany">
                     <label>Gắn với Công ty (Để giới hạn dữ liệu hiển thị)</label>
@@ -382,6 +405,20 @@
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button id="btnHuyDoiPass" onclick="dongModalDoiMatKhau()" style="flex:1; background:#6c757d; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold;">Hủy Xóa</button>
             <button onclick="luuMatKhauMoi()" style="flex:1; background:#28a745; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold;">Lưu Mật Khẩu</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalThemCongTy" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:white; padding:25px; border-radius:8px; width:400px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+        <h3 style="margin-top:0; color:#0056b3; border-bottom:2px solid #0056b3; padding-bottom:10px;">🏢 Thêm Công Ty Mới</h3>
+        <div class="form-group">
+            <label style="font-weight:bold;">Tên công ty đầy đủ:</label>
+            <input type="text" id="newCompanyName" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Ví dụ: Công ty CP Dược phẩm...">
+        </div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button onclick="dongModalThemCongTy()" style="flex:1; background:#6c757d; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold;">Hủy</button>
+            <button onclick="luuCongTyMoi()" style="flex:1; background:#28a745; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold;">Lưu & Chọn ngay</button>
         </div>
     </div>
 </div>
