@@ -16,17 +16,11 @@
     <link rel="stylesheet" href="style.css">
 
     <style>
-        /* CẬP NHẬT LẠI CSS IN ẤN ĐỂ KHÔNG BỊ MẤT CHỮ VÀ DÀN TRANG ĐẸP HƠN */
         @media print {
-            @page { 
-                size: A4; 
-                margin: 20mm 15mm 20mm 20mm; /* Lề: Trên 20mm, Phải 15mm, Dưới 20mm, Trái 20mm */
-            } 
+            @page { size: A4; margin: 20mm 15mm 20mm 20mm; } 
             body { margin: 0; padding: 0; } 
             #main-ui, .no-print { display: none !important; } 
             #print-section { display: block; } 
-            
-            /* Tránh việc bảng hoặc các hàng bị cắt ngang giữa 2 trang */
             table { page-break-inside: auto; }
             tr { page-break-inside: avoid; page-break-after: auto; }
             thead { display: table-header-group; }
@@ -81,7 +75,7 @@
                     <label>Công ty</label>
                     <div style="display: flex; gap: 10px;">
                         <select id="selectCongTyHD" class="search-select" style="flex: 1;"></select>
-                        <button class="btn btn-warning" onclick="hienThiModalThemCongTy()" style="padding: 0 15px; font-size: 13px; white-space: nowrap;">+ Thêm mới</button>
+                        <button class="btn btn-warning" onclick="hienThiModalThemCongTy()" style="padding: 0 15px; font-size: 13px; white-space: nowrap;">+ Thêm công ty</button>
                     </div>
                 </div>
                 <div class="form-group"><label>Số HĐ</label><input type="text" id="soHoaDonInput"></div>
@@ -90,16 +84,15 @@
                     <div class="form-group"><label>Ngày Nhập kho</label><input type="date" id="ngayNhapKho"></div>
                 </div>
                 <div class="form-group"><label>Số tiền</label><input type="number" id="tienHoaDon"></div>
+                <div class="form-group"><label>Ghi chú</label><input type="text" id="ghiChuHoaDon" placeholder="Nhập ghi chú (nếu có)..."></div>
                 <button class="btn" onclick="themHoaDon()">Lưu</button>
             </div>
             <div class="form-box" id="box-xac-nhan-thanh-toan">
                 <h3>Xác Nhận Thanh Toán Hóa Đơn</h3>
-                
                 <div class="form-group">
                     <label>Chọn Công ty / Đối tác</label>
                     <select id="selectCongTyTT" class="search-select" style="width: 100%;"></select>
                 </div>
-
                 <div class="form-group" style="margin-top: 15px;">
                     <label style="font-weight: bold; color: #0056b3;">Danh sách Hóa đơn cần xử lý:</label>
                     <div id="khuVucDanhSachThanhToan" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px; background: #fafafa;">
@@ -111,12 +104,15 @@
         <div class="form-box" style="border-left: 5px solid #1D6F42;"><input type="file" id="fileExcel" accept=".xlsx, .xls" style="width:100%;"><button class="btn btn-excel" onclick="nhapTuExcel()">Tải Hàng Loạt Hóa Đơn (Excel)</button></div>
         
         <div class="form-box" id="box-xuat-pdf-nhap-kho" style="margin-top: 20px; border-left: 5px solid #17a2b8;">
-            <h3 style="color: #17a2b8;">📄 Xuất PDF Hóa Đơn Nhập Kho</h3>
+            <h3 style="color: #17a2b8;">📄 Xuất Báo Cáo Hóa Đơn Nhập Kho</h3>
             <div class="grid-2">
                 <div class="form-group"><label>Từ ngày nhập kho</label><input type="date" id="pdfTuNgay"></div>
                 <div class="form-group"><label>Đến ngày nhập kho</label><input type="date" id="pdfDenNgay"></div>
             </div>
-            <button class="btn" onclick="xuatPDFNhapKho()" style="width: 100%; background: #17a2b8; color: white; font-weight: bold; font-size: 15px;">📥 XUẤT PDF & IN</button>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" onclick="xuatPDFNhapKho()" style="width: 50%; background: #17a2b8; color: white; font-weight: bold; font-size: 15px;">📥 XUẤT PDF & IN</button>
+                <button class="btn" onclick="xuatExcelNhapKho()" style="width: 50%; background: #28a745; color: white; font-weight: bold; font-size: 15px;">📊 XUẤT EXCEL</button>
+            </div>
         </div>
     </div>
 
@@ -140,6 +136,7 @@
                     <th class="text-right">Số Tiền (VNĐ)</th>
                     <th>Ngày TT</th>
                     <th>Trạng Thái</th>
+                    <th>Ghi chú</th>
                     <th id="th-thao-tac" style="display:none; background:#dc3545; color:white; width: 40px;">Xóa</th>
                 </tr>
             </thead>
@@ -229,6 +226,7 @@
                 
                 <button class="btn btn-success" style="width:100%; margin-top:10px; font-size:16px;" onclick="inBienBanNghiemThu()">🖨️ IN BIÊN BẢN (A4)</button>
                 <button class="btn btn-primary" style="width:100%; margin-top:10px; font-size:16px; background:#007bff; color:white;" onclick="xuatFileWordBBNT()">📄 XUẤT FILE WORD</button>
+                <button class="btn btn-info" style="width:100%; margin-top:10px; font-size:16px; background:#17a2b8; color:white;" onclick="xuatExcelBBNT()">📊 XUẤT EXCEL</button>
             </div>
 
             <div class="a4-wrapper-nt">
@@ -261,7 +259,7 @@
                             <tr><td>Điện thoại</td><td>: <span id="docSDTANT">...</span></td></tr>
                             <tr><td>Email</td><td>: <span id="docEmailANT">...</span></td></tr>
                             <tr><td>Tài khoản số</td><td>: <span id="docTKANT">...</span></td></tr>
-                            <tr><td></td><td>  <span id="docGiaoDichANT">...</span></td></tr>
+                            <tr><td></td><td> &nbsp;<span id="docGiaoDichANT">...</span></td></tr>
                             <tr><td>Mã số thuế</td><td>: <span id="docMSTANT">...</span></td></tr>
                             <tr><td>Mã ĐVQHNS</td><td>: <span id="docMaDVANT">...</span></td></tr>
                             <tr><td>Đại diện</td><td>: <span class="bold-nt" id="docDaiDienANT">...</span> <span style="margin-left:60px;">Chức vụ: <span id="docChucVuANT">...</span></span></td></tr>
@@ -413,8 +411,8 @@
     <div style="background:white; padding:25px; border-radius:8px; width:400px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
         <h3 style="margin-top:0; color:#0056b3; border-bottom:2px solid #0056b3; padding-bottom:10px;">🏢 Thêm Công Ty Mới</h3>
         <div class="form-group">
-            <label style="font-weight:bold;">Ghi đầy đủ tên Công ty:</label>
-            <input type="text" id="newCompanyName" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Ví dụ: CÔNG TY TNHH...(GHI CHỮ IN HOA)">
+            <label style="font-weight:bold;">Tên công ty đầy đủ:</label>
+            <input type="text" id="newCompanyName" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Ví dụ: Công ty CP Dược phẩm...">
         </div>
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button onclick="dongModalThemCongTy()" style="flex:1; background:#6c757d; color:white; border:none; padding:10px; border-radius:4px; cursor:pointer; font-weight:bold;">Hủy</button>

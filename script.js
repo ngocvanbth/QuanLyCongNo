@@ -19,6 +19,12 @@ let benADefault = {
 };
 let benA = { ...benADefault };
 
+function getExcelTimestamp() {
+    let d = new Date();
+    let pad = n => n < 10 ? '0'+n : n;
+    return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
 if(window.location.pathname.indexOf('login.html') === -1) {
     database.ref('usersDB').on('value', (snapshot) => {
         if(snapshot.exists()) { 
@@ -47,7 +53,6 @@ if(window.location.pathname.indexOf('login.html') === -1) {
             loadDsHopDongNT();
             renderBangAdminHopDong();
 
-            // Nếu đang ở màn hình Thanh toán thì update lại bảng luôn
             let ctyTT = document.getElementById('selectCongTyTT')?.value;
             if(ctyTT) loadHopDongVaHoaDonTT();
         } else {
@@ -163,13 +168,11 @@ $(document).ready(function() {
     updateDocNT();
     renderBenANT();
 
-    // Lắng nghe sự thay đổi của mục Lọc dữ liệu
     $('#filterCongTy').on('change', renderTable);
     $('#filterCongTy').on('select2:select', renderTable); 
     $('#filterThangNhap').on('change', renderTable);
     $('#filterDate').on('change', renderTable);
 
-    // Lắng nghe sự thay đổi của mục chọn Công ty để hiển thị Bảng Thanh Toán
     $('#selectCongTyTT').on('change', loadHopDongVaHoaDonTT);
     $('#selectCongTyTT').on('select2:select', loadHopDongVaHoaDonTT);
 });
@@ -349,10 +352,20 @@ function themPhuLuc() {
 }
 
 function themHoaDon() {
-    let tenCty = document.getElementById('selectCongTyHD').value, soHD = document.getElementById('soHoaDonInput').value, ngayHD = document.getElementById('ngayHoaDon').value, ngayNK = document.getElementById('ngayNhapKho').value, tien = Number(document.getElementById('tienHoaDon').value);
+    let tenCty = document.getElementById('selectCongTyHD').value;
+    let soHD = document.getElementById('soHoaDonInput').value;
+    let ngayHD = document.getElementById('ngayHoaDon').value;
+    let ngayNK = document.getElementById('ngayNhapKho').value;
+    let tien = Number(document.getElementById('tienHoaDon').value);
+    let gc = document.getElementById('ghiChuHoaDon').value.trim();
+    
     if(!tenCty || !soHD || !tien) return alert("Vui lòng chọn Công ty, nhập Số hóa đơn và Số tiền!");
-    db.hoaDons.push({ id: Date.now().toString(), tenCongTy: tenCty, idHD: "", soHoaDon: soHD, ngayHoaDon: ngayHD, ngayNhapKho: ngayNK, soTien: tien }); 
-    saveData(); alert("Đã lưu Hóa đơn thành công!"); document.getElementById('soHoaDonInput').value = ''; document.getElementById('tienHoaDon').value = '';
+    db.hoaDons.push({ id: Date.now().toString(), tenCongTy: tenCty, idHD: "", soHoaDon: soHD, ngayHoaDon: ngayHD, ngayNhapKho: ngayNK, soTien: tien, ghiChu: gc }); 
+    saveData(); 
+    alert("Đã lưu Hóa đơn thành công!"); 
+    document.getElementById('soHoaDonInput').value = ''; 
+    document.getElementById('tienHoaDon').value = '';
+    document.getElementById('ghiChuHoaDon').value = '';
 }
 
 function parseExcelDate(val) {
@@ -388,7 +401,7 @@ function nhapTuExcel() {
             else tenCty = exists.tenCongTy;
             let isDup = db.hoaDons.some(h => h.tenCongTy.trim().toUpperCase() === tenCty.trim().toUpperCase() && h.soHoaDon === soHD && h.soTien === soTien);
             if (isDup) { countDup++; continue; }
-            db.hoaDons.push({ id: 'INV_' + Date.now() + i, tenCongTy: tenCty, idHD: "", soHoaDon: soHD, ngayHoaDon: ngayHD, ngayNhapKho: ngayNK, soTien: soTien }); countNew++;
+            db.hoaDons.push({ id: 'INV_' + Date.now() + i, tenCongTy: tenCty, idHD: "", soHoaDon: soHD, ngayHoaDon: ngayHD, ngayNhapKho: ngayNK, soTien: soTien, ghiChu: "" }); countNew++;
         }
         saveData(); alert(`Đã tải lên mới: ${countNew} hóa đơn.\nBỏ qua: ${countDup} hóa đơn trùng.`); fileInput.value = "";
     };
@@ -412,7 +425,7 @@ function loadSelectOptions() {
 }
 
 // ------------------------------------------------------------------
-// BẢNG DANH SÁCH THANH TOÁN MỚI (CÓ CHECKBOX CHỌN NHIỀU)
+// BẢNG DANH SÁCH THANH TOÁN
 // ------------------------------------------------------------------
 function loadHopDongVaHoaDonTT() {
     let cty = document.getElementById('selectCongTyTT')?.value;
@@ -532,18 +545,15 @@ function luuThanhToanHangLoat() {
     let tongTien = document.getElementById('tongTienChonDisplay').innerText;
 
     if(confirm(`Bạn có chắc chắn muốn ghi nhận ĐÃ THANH TOÁN cho ${checkboxes.length} hóa đơn được chọn?\n\nTổng số tiền: ${tongTien} VNĐ\nNgày thanh toán: ${formatDate(ngayInput)}`)) {
-        
         checkboxes.forEach(chk => {
             let idHoaDon = chk.value;
             let soTien = parseFloat(chk.getAttribute('data-tien'));
-            
             db.thanhToans.push({ 
                 idHoaDon: idHoaDon, 
                 soTien: soTien, 
                 ngay: ngayInput 
             });
         });
-        
         saveData(); 
         alert("✅ Đã ghi nhận thanh toán thành công!");
         loadHopDongVaHoaDonTT(); 
@@ -560,6 +570,19 @@ function luuNhanhSoHD(idHoaDon) {
         db.hoaDons[index].idHD_Text = soHDMoi;
         saveData();
         alert("Đã lưu số hợp đồng thành công!");
+        renderTable(); 
+    }
+}
+
+function luuNhanhGhiChu(idHoaDon) {
+    let inputGC = document.getElementById(`ghiChu_input_${idHoaDon}`);
+    if(!inputGC) return;
+    
+    let index = db.hoaDons.findIndex(h => h.id === idHoaDon);
+    if(index !== -1) {
+        db.hoaDons[index].ghiChu = inputGC.value.trim();
+        saveData();
+        alert("Đã cập nhật ghi chú thành công!");
         renderTable(); 
     }
 }
@@ -603,6 +626,11 @@ function renderTable() {
                     <input type="text" id="soHD_input_${hoaDon.id}" value="${valSoHD}" placeholder="Nhập số..." style="width:110px; padding:4px; border:1px solid #ccc; border-radius:4px;">
                     <button onclick="luuNhanhSoHD('${hoaDon.id}')" style="background:#28a745; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Lưu</button>
                 </div>`;
+                
+            let oNhapGhiChu = `<div style="display:flex; gap:5px; align-items:center; min-width:140px;">
+                    <input type="text" id="ghiChu_input_${hoaDon.id}" value="${hoaDon.ghiChu || ''}" placeholder="..." style="flex:1; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                    <button onclick="luuNhanhGhiChu('${hoaDon.id}')" style="background:#28a745; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Lưu</button>
+                </div>`;
             
             let gdThanhToan = fThanhToans.filter(tt => tt.idHoaDon === hoaDon.id), daThanhToan = gdThanhToan.length > 0;
             
@@ -622,29 +650,28 @@ function renderTable() {
                 <td class="text-right"><strong>${formatTien(hoaDon.soTien)}</strong></td>
                 <td class="text-center">${daThanhToan ? formatDate(gdThanhToan[gdThanhToan.length-1].ngay) : '-'}</td>
                 <td class="text-center">${daThanhToan ? 'Đã TT' : 'Chưa TT'}</td>
+                <td>${oNhapGhiChu}</td>
                 ${btnXoaHoaDon}
             </tr>`;
         });
         
         if (ctyGroup.totalNo > 0) {
-            let colSpanFoot = isAdmin ? 6 : 5;
-            let colEmpty = isAdmin ? 3 : 2;
-            html += `<tr style="background:#f4f8fb;"><td colspan="${colSpanFoot}" class="text-right bold" style="color:#0056b3;">Tổng nợ ${ctyGroup.displayName}:</td><td class="text-right text-danger bold">${formatTien(ctyGroup.totalNo)}</td><td colspan="${colEmpty}"></td></tr>`;
+            let colEmpty = isAdmin ? 4 : 3;
+            html += `<tr style="background:#f4f8fb;"><td colspan="5" class="text-right bold" style="color:#0056b3;">Tổng nợ ${ctyGroup.displayName}:</td><td class="text-right text-danger bold">${formatTien(ctyGroup.totalNo)}</td><td colspan="${colEmpty}"></td></tr>`;
         }
     });
     
-    if(filteredHoaDons.length === 0) html = `<tr><td colspan="9" class="text-center">Chưa có dữ liệu</td></tr>`;
+    if(filteredHoaDons.length === 0) html = `<tr><td colspan="10" class="text-center">Chưa có dữ liệu</td></tr>`;
     if(document.getElementById('bangTheoDoi')) document.getElementById('bangTheoDoi').innerHTML = html;
     
     if(document.getElementById('bangTheoDoiFoot')) {
-        let colSpanFoot = isAdmin ? 6 : 5;
-        let colEmpty = isAdmin ? 3 : 2;
-        document.getElementById('bangTheoDoiFoot').innerHTML = `<tr><td colspan="${colSpanFoot}" class="text-right bold" style="font-size:15px; color:#1D6F42;">TỔNG NỢ CÒN LẠI:</td><td class="text-right text-danger bold" style="font-size:16px;">${formatTien(tongTatCaNo)}</td><td colspan="${colEmpty}"></td></tr>`;
+        let colEmpty = isAdmin ? 4 : 3;
+        document.getElementById('bangTheoDoiFoot').innerHTML = `<tr><td colspan="5" class="text-right bold" style="font-size:15px; color:#1D6F42;">TỔNG NỢ CÒN LẠI:</td><td class="text-right text-danger bold" style="font-size:16px;">${formatTien(tongTatCaNo)}</td><td colspan="${colEmpty}"></td></tr>`;
     }
 }
 
 // ==========================================
-// HÀM IN BÁO CÁO CÔNG NỢ PDF
+// HÀM IN BÁO CÁO CÔNG NỢ PDF & EXCEL
 // ==========================================
 function getInBaoCaoStyle() {
     return `
@@ -660,6 +687,7 @@ function getInBaoCaoStyle() {
         th { background-color: #f2f2f2; text-align: center; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
+        .text-left { text-align: left; }
         .bold { font-weight: bold; }
         .group-row { background-color: #f9f9f9; font-weight: bold; }
         .footer-sig { margin-top: 30px; width: 100%; border: none; }
@@ -668,10 +696,7 @@ function getInBaoCaoStyle() {
 }
 
 function inBaoCaoTongHop() {
-    let filtered = (currentUser.role === 'user') 
-        ? db.hoaDons.filter(h => h.tenCongTy === currentUser.company)
-        : db.hoaDons;
-
+    let filtered = (currentUser.role === 'user') ? db.hoaDons.filter(h => h.tenCongTy === currentUser.company) : db.hoaDons;
     let grouped = {};
     filtered.forEach(h => {
         if(!grouped[h.tenCongTy]) grouped[h.tenCongTy] = { total: 0, invoices: [] };
@@ -698,7 +723,8 @@ function inBaoCaoTongHop() {
                     <td style="padding-left: 20px;">+ Số HĐơn: ${inv.soHoaDon}</td>
                     <td class="text-center">${formatDate(inv.ngayHoaDon)}</td>
                     <td class="text-right">${formatTien(inv.soTien)}</td>
-                    <td></td><td></td>
+                    <td></td>
+                    <td class="text-left">${inv.ghiChu || ''}</td>
                 </tr>`;
         });
     });
@@ -772,7 +798,7 @@ function inBaoCaoChiTiet() {
         let g = grouped[k];
         if(g.items.length === 0) return;
         grandTotal += g.subTotal;
-        rows += `<tr class="group-row"><td colspan="6">${g.cty} - HĐ: ${g.hd}</td></tr>`;
+        rows += `<tr class="group-row"><td colspan="7">${g.cty} - HĐ: ${g.hd}</td></tr>`;
         g.items.forEach(inv => {
             rows += `
                 <tr>
@@ -782,9 +808,10 @@ function inBaoCaoChiTiet() {
                     <td class="text-right">${formatTien(inv.soTien)}</td>
                     <td class="text-center">Chưa thanh toán</td>
                     <td class="text-right">${formatTien(inv.soTien)}</td>
+                    <td class="text-left">${inv.ghiChu || ''}</td>
                 </tr>`;
         });
-        rows += `<tr class="bold"><td colspan="5" class="text-right">Cộng nợ Hợp đồng:</td><td class="text-right">${formatTien(g.subTotal)}</td></tr>`;
+        rows += `<tr class="bold"><td colspan="5" class="text-right">Cộng nợ Hợp đồng:</td><td class="text-right">${formatTien(g.subTotal)}</td><td></td></tr>`;
     });
 
     let content = `
@@ -808,6 +835,7 @@ function inBaoCaoChiTiet() {
                         <th>Số tiền</th>
                         <th>Trạng thái</th>
                         <th>Còn nợ</th>
+                        <th>Ghi chú</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
@@ -815,6 +843,7 @@ function inBaoCaoChiTiet() {
                     <tr class="bold" style="background: #eee; font-size: 14px;">
                         <td colspan="5" class="text-right">TỔNG CỘNG DƯ NỢ:</td>
                         <td class="text-right" style="color: red;">${formatTien(grandTotal)}</td>
+                        <td></td>
                     </tr>
                 </tfoot>
             </table>
@@ -867,9 +896,7 @@ function taiMauExcelHoaDonNT() {
 
 function xuatFileWordBBNT() {
     let printDiv = document.getElementById("ban-in-nghiem-thu");
-    
     let cloneDiv = printDiv.cloneNode(true);
-    
     let imgs = cloneDiv.getElementsByTagName('img');
     if(imgs.length > 0) {
         let imgThucTe = printDiv.getElementsByTagName('img')[0];
@@ -901,6 +928,59 @@ function xuatFileWordBBNT() {
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+}
+
+// Tính năng xuất Excel cho BBNT
+function xuatExcelBBNT() {
+    let name = document.getElementById('inpTenBBNT').value.trim();
+    if(!name) return alert("Vui lòng lưu hoặc chọn một biên bản từ danh sách trước khi xuất Excel!");
+    let r = nghiemThuDB[name];
+    if(!r) return alert("Không tìm thấy dữ liệu biên bản!");
+
+    let data = [];
+    data.push(["CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM"]);
+    data.push(["Độc lập - Tự do - Hạnh phúc"]);
+    data.push([]);
+    data.push(["BIÊN BẢN NGHIỆM THU HÀNG HÓA"]);
+    data.push([`Số: ${r.soBBNT || ''}`]);
+    data.push([]);
+    data.push([`Căn cứ Quyết định số ${r.soQD || ''} của ${r.donViQD || ''} ${r.noiDungQD || ''}`]);
+    data.push([`Căn cứ Hợp đồng số: ${r.soHD || ''} ngày ${r.ngayHD || ''} ${r.phuLuc ? 'và phụ lục ' + r.phuLuc : ''} giữa TTYT Khu vực Hàm Thuận Bắc và ${r.tenBenB || ''}`]);
+    data.push([]);
+    data.push(["ĐẠI DIỆN BÊN A (CHỦ ĐẦU TƯ): TTYT KHU VỰC HÀM THUẬN BẮC"]);
+    data.push(["Địa chỉ:", benA.diaChi]);
+    data.push(["Điện thoại:", benA.sdt]);
+    data.push(["Đại diện:", benA.daiDien, "Chức vụ:", benA.chucVu]);
+    data.push([]);
+    data.push([`ĐẠI DIỆN BÊN B (NHÀ THẦU): ${r.tenBenB || ''}`]);
+    data.push(["Địa chỉ:", r.diaChiB || '']);
+    data.push(["Điện thoại:", r.sdtB || '']);
+    data.push(["Đại diện:", r.daiDienB || '', "Chức vụ:", r.chucVuB || '']);
+    data.push([]);
+    data.push(["NỘI DUNG NGHIỆM THU:"]);
+    data.push(["STT", "Số HĐ", "Ngày HĐ", "Hàng hóa", "ĐVT", "SL", "Đơn giá", "Thành tiền"]);
+
+    let total = 0;
+    let list = r.excelData || [];
+    list.forEach(item => {
+        total += item.thanhTien;
+        data.push([
+            item.stt, item.soHD, formatDate(item.ngayHD), item.tenHang, item.dvt, item.sl, item.gia, item.thanhTien
+        ]);
+    });
+
+    data.push(["", "", "", "", "", "", "Tổng cộng:", total]);
+    data.push([`Số tiền bằng chữ: ${docTienBangChuNT(total)}`]);
+    data.push([]);
+    data.push(["ĐẠI DIỆN BÊN A", "", "", "", "ĐẠI DIỆN BÊN B"]);
+
+    let ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{wch: 5}, {wch: 15}, {wch: 15}, {wch: 40}, {wch: 10}, {wch: 10}, {wch: 15}, {wch: 15}];
+    
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "BBNT");
+
+    XLSX.writeFile(wb, `BienBanNghiemThu_${getExcelTimestamp()}.xlsx`);
 }
 
 function renderBenANT() {
@@ -1082,6 +1162,9 @@ function saveRecordNT() {
     let name = document.getElementById('inpTenBBNT').value.trim();
     if(!name) return alert("Vui lòng đặt tên cho Biên Bản ở ô bên dưới (Ví dụ: BBNT_CPC1_Thang4) rồi mới bấm Lưu!");
 
+    // Loại bỏ mọi thuộc tính undefined trước khi push Firebase để tránh lỗi lưu
+    let cleanExcelData = JSON.parse(JSON.stringify(currentExcelDataNT)); 
+
     nghiemThuDB[name] = { 
         name: name, soBBNT: document.getElementById('inpSoBBNT').value,
         ngayKy: document.getElementById('inpNgayKyNT').value, soQD: document.getElementById('inpSoQDNT').value, 
@@ -1091,7 +1174,7 @@ function saveRecordNT() {
         diaChiB: document.getElementById('inpDiaChiBNT').value, sdtB: document.getElementById('inpSDTBNT').value, 
         tkB: document.getElementById('inpTKBNT').value, mstB: document.getElementById('inpMSTBNT').value, 
         daiDienB: document.getElementById('inpDaiDienBNT').value, chucVuB: document.getElementById('inpChucVuBNT').value, 
-        guq: document.getElementById('inpGUQNT').value, excelData: currentExcelDataNT 
+        guq: document.getElementById('inpGUQNT').value, excelData: cleanExcelData 
     };
     
     saveNghiemThu(); 
@@ -1204,7 +1287,7 @@ function luuCongTyMoi() {
 }
 
 // ==========================================
-// TÍNH NĂNG XUẤT PDF HÓA ĐƠN NHẬP KHO
+// TÍNH NĂNG XUẤT HÓA ĐƠN NHẬP KHO (PDF & EXCEL)
 // ==========================================
 function xuatPDFNhapKho() {
     if(currentUser.role !== 'admin' && currentUser.role !== 'nhapkho') return alert("Bạn không có quyền xuất báo cáo này!");
@@ -1232,7 +1315,7 @@ function xuatPDFNhapKho() {
     doc.text(`Tu ngay: ${dateStrTu} - Den ngay: ${dateStrDen}`, 14, 25);
     doc.text(`Ngay xuat bao cao: ${new Date().toLocaleDateString('vi-VN')} ${new Date().toLocaleTimeString('vi-VN')}`, 14, 31);
 
-    let tableColumn = ["STT", "Ten cong ty", "So hoa don", "Ngay hoa don", "Ngay nhap kho", "So tien (VND)"];
+    let tableColumn = ["STT", "Ten cong ty", "So hoa don", "Ngay hoa don", "Ngay nhap kho", "So tien (VND)", "Ghi chu"];
     let tableRows = [];
     let totalValue = 0;
 
@@ -1242,8 +1325,9 @@ function xuatPDFNhapKho() {
         let pNgayNK = hd.ngayNhapKho ? new Date(hd.ngayNhapKho).toLocaleDateString('vi-VN') : '';
         
         let safeCty = hd.tenCongTy.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
+        let safeGC = (hd.ghiChu || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
         
-        tableRows.push([ index + 1, safeCty, hd.soHoaDon, pNgayHD, pNgayNK, formatTien(hd.soTien) ]);
+        tableRows.push([ index + 1, safeCty, hd.soHoaDon, pNgayHD, pNgayNK, formatTien(hd.soTien), safeGC ]);
     });
 
     doc.autoTable({
@@ -1252,7 +1336,7 @@ function xuatPDFNhapKho() {
         body: tableRows,
         styles: { fontStyle: "normal", fontSize: 10, cellPadding: 3 },
         headStyles: { fillColor: [0, 86, 179], textColor: [255, 255, 255], halign: 'center' },
-        columnStyles: { 0: { halign: 'center', cellWidth: 15 }, 1: { cellWidth: 100 }, 5: { halign: 'right' } },
+        columnStyles: { 0: { halign: 'center', cellWidth: 15 }, 1: { cellWidth: 80 }, 5: { halign: 'right' }, 6: { cellWidth: 'auto' } },
         margin: { top: 10, right: 14, bottom: 20, left: 14 },
         didDrawPage: function (data) {
             doc.setFontSize(10);
@@ -1267,4 +1351,49 @@ function xuatPDFNhapKho() {
 
     doc.autoPrint();
     window.open(doc.output('bloburl'), '_blank');
+}
+
+function xuatExcelNhapKho() {
+    if(currentUser.role !== 'admin' && currentUser.role !== 'nhapkho') return alert("Bạn không có quyền xuất báo cáo này!");
+
+    let tuNgay = document.getElementById('pdfTuNgay').value;
+    let denNgay = document.getElementById('pdfDenNgay').value;
+
+    if(!tuNgay || !denNgay) return alert("Vui lòng chọn đầy đủ Từ ngày và Đến ngày!");
+    if(tuNgay > denNgay) return alert("Từ ngày không được lớn hơn Đến ngày!");
+
+    let filtered = db.hoaDons.filter(hd => hd.ngayNhapKho && hd.ngayNhapKho >= tuNgay && hd.ngayNhapKho <= denNgay);
+    if(filtered.length === 0) return alert("Không có hóa đơn nhập kho nào trong khoảng thời gian này!");
+
+    filtered.sort((a, b) => new Date(a.ngayNhapKho) - new Date(b.ngayNhapKho));
+
+    let data = [
+        ["DANH SÁCH HÓA ĐƠN NHẬP KHO"],
+        [`Từ ngày: ${formatDate(tuNgay)} - Đến ngày: ${formatDate(denNgay)}`],
+        [],
+        ["STT", "Tên công ty", "Số hóa đơn", "Ngày hóa đơn", "Ngày nhập kho", "Số tiền (VNĐ)", "Ghi chú"]
+    ];
+
+    let totalValue = 0;
+    filtered.forEach((hd, index) => {
+        totalValue += hd.soTien;
+        data.push([
+            index + 1,
+            hd.tenCongTy,
+            hd.soHoaDon,
+            formatDate(hd.ngayHoaDon),
+            formatDate(hd.ngayNhapKho),
+            hd.soTien,
+            hd.ghiChu || ''
+        ]);
+    });
+
+    data.push(["", "", "", "", "Tổng cộng:", totalValue, ""]);
+
+    let ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{wch: 5}, {wch: 40}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 30}];
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "HoaDonNhapKho");
+    
+    XLSX.writeFile(wb, `HoaDonNhapKho_${getExcelTimestamp()}.xlsx`);
 }
