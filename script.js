@@ -10,6 +10,30 @@ let usersDB = {};
 let db = { hopDongs: [], phuLucs: [], hoaDons: [], thanhToans: [] };
 let nghiemThuDB = {};
 let currentExcelDataNT = [];
+let currentBBNTId = null;
+
+const APP_UPDATE_NOTICE_KEY = 'congnohtb_update_seen_BBNT_ID_HD_BENB_20260622';
+
+function hienThiThongBaoCapNhat(forceShow = false) {
+    const modal = document.getElementById('modalCapNhatTinhNang');
+    if(!modal) return;
+    if(!forceShow && localStorage.getItem(APP_UPDATE_NOTICE_KEY) === '1') return;
+
+    const passModal = document.getElementById('modalDoiMatKhau');
+    const isPasswordModalOpen = passModal && passModal.style.display === 'flex';
+    if(!forceShow && isPasswordModalOpen) {
+        setTimeout(() => hienThiThongBaoCapNhat(false), 2500);
+        return;
+    }
+
+    modal.style.display = 'flex';
+}
+
+function dongThongBaoCapNhat(daXem = true) {
+    if(daXem) localStorage.setItem(APP_UPDATE_NOTICE_KEY, '1');
+    const modal = document.getElementById('modalCapNhatTinhNang');
+    if(modal) modal.style.display = 'none';
+}
 
 let benADefault = {
     ten: "TRUNG TÂM Y TẾ KHU VỰC HÀM THUẬN BẮC", diaChi: "Km 17 Đường 8/4, Thôn Lâm Hòa, xã Hàm Thuận, tỉnh Lâm Đồng",
@@ -75,7 +99,7 @@ if(window.location.pathname.indexOf('login.html') === -1) {
 
 function saveData() { database.ref('congNoDB').set(db); }
 function saveUsers() { database.ref('usersDB').set(usersDB); }
-function saveNghiemThu() { database.ref('nghiemThuDB').set(nghiemThuDB); }
+function saveNghiemThu() { database.ref('nghiemThuDB').set(nghiemThuDB); } // Chỉ giữ lại cho dữ liệu cũ, BBNT mới lưu từng record theo ID
 
 function dangXuat() {
     sessionStorage.removeItem('currentUser');
@@ -167,6 +191,7 @@ $(document).ready(function() {
     $('.search-select').select2({ width: '100%' });
     updateDocNT();
     renderBenANT();
+    setTimeout(() => hienThiThongBaoCapNhat(false), 700);
 
     $('#filterCongTy').on('change', renderTable);
     $('#filterCongTy').on('select2:select', renderTable); 
@@ -569,6 +594,7 @@ function luuNhanhSoHD(idHoaDon) {
     if(index !== -1) {
         db.hoaDons[index].idHD_Text = soHDMoi;
         saveData();
+        loadDsHopDongNT();
         alert("Đã lưu số hợp đồng thành công!");
         renderTable(); 
     }
@@ -932,10 +958,21 @@ function xuatFileWordBBNT() {
 
 // Tính năng xuất Excel cho BBNT
 function xuatExcelBBNT() {
-    let name = document.getElementById('inpTenBBNT').value.trim();
-    if(!name) return alert("Vui lòng lưu hoặc chọn một biên bản từ danh sách trước khi xuất Excel!");
-    let r = nghiemThuDB[name];
-    if(!r) return alert("Không tìm thấy dữ liệu biên bản!");
+    let recordId = getCurrentBBNTId();
+    let r = recordId ? nghiemThuDB[recordId] : null;
+
+    // Tương thích trường hợp dữ liệu cũ: nếu chưa có ID đang chọn thì dò theo tên hiển thị
+    if(!r) {
+        let name = document.getElementById('inpTenBBNT').value.trim();
+        let found = findBBNTRecordByName(name);
+        if(found) {
+            recordId = found.id;
+            r = found.record;
+            setCurrentBBNTId(recordId);
+        }
+    }
+
+    if(!r) return alert("Vui lòng lưu hoặc chọn một biên bản từ danh sách trước khi xuất Excel!");
 
     let data = [];
     data.push(["CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM"]);
@@ -963,7 +1000,7 @@ function xuatExcelBBNT() {
     let total = 0;
     let list = r.excelData || [];
     list.forEach(item => {
-        total += item.thanhTien;
+        total += Number(item.thanhTien) || 0;
         data.push([
             item.stt, item.soHD, formatDate(item.ngayHD), item.tenHang, item.dvt, item.sl, item.gia, item.thanhTien
         ]);
@@ -1020,25 +1057,195 @@ function docFileExcelBenA() {
     reader.readAsArrayBuffer(fileInput.files[0]);
 }
 
-function loadDsHopDongNT() {
-    let html = '<option value="">-- Chọn Hợp đồng --</option>';
+function userCanSeeCompanyNT(companyName) {
+    if(!currentUser || currentUser.role === 'admin' || currentUser.role === 'nhapkho') return true;
+    return normalizeTextNT(companyName) === normalizeTextNT(currentUser.company);
+}
+
+function isValidContractNumberNT(soHopDong) {
+    let text = (soHopDong || '').toString().trim();
+    if(!text) return false;
+    let norm = normalizeTextNT(text);
+    return !['CHƯA CÓ', 'CHUA CO', 'KHÔNG CÓ', 'KHONG CO', 'HÓA ĐƠN NGOÀI HĐ', 'HOA DON NGOAI HD'].includes(norm);
+}
+
+function getInvoiceContractNumberNT(inv) {
+    let soHDText = (inv?.idHD_Text || '').toString().trim();
+    if(isValidContractNumberNT(soHDText)) return soHDText;
+    let hopDong = db.hopDongs.find(hd => hd.id === inv?.idHD);
+    let soHopDong = hopDong ? (hopDong.soHopDong || '').toString().trim() : '';
+    return isValidContractNumberNT(soHopDong) ? soHopDong : '';
+}
+
+function makeContractKeyNT(companyName, soHopDong) {
+    return normalizeTextNT(companyName) + '||' + normalizeTextNT(soHopDong);
+}
+
+function getCompanyContractsForNT() {
+    let map = new Map();
+
     db.hopDongs.forEach(hd => {
-        if(currentUser.role === 'admin' || hd.tenCongTy === currentUser.company) {
-            html += `<option value="${hd.id}">${hd.tenCongTy} - HĐ: ${hd.soHopDong}</option>`;
+        let tenCongTy = (hd.tenCongTy || '').toString().trim();
+        let soHopDong = (hd.soHopDong || '').toString().trim();
+        if(!tenCongTy || !isValidContractNumberNT(soHopDong) || !userCanSeeCompanyNT(tenCongTy)) return;
+        let key = makeContractKeyNT(tenCongTy, soHopDong);
+        if(!map.has(key)) {
+            map.set(key, {
+                type: 'contract',
+                value: 'HD::' + encodeURIComponent(hd.id),
+                tenCongTy,
+                soHopDong,
+                source: 'Danh mục HĐ'
+            });
         }
     });
-    if(document.getElementById('selectHopDongNT')) document.getElementById('selectHopDongNT').innerHTML = html;
+
+    db.hoaDons.forEach(inv => {
+        let tenCongTy = (inv.tenCongTy || '').toString().trim();
+        let soHopDong = getInvoiceContractNumberNT(inv);
+        if(!tenCongTy || !isValidContractNumberNT(soHopDong) || !userCanSeeCompanyNT(tenCongTy)) return;
+        let key = makeContractKeyNT(tenCongTy, soHopDong);
+        if(!map.has(key)) {
+            map.set(key, {
+                type: 'invoice',
+                value: 'INV::' + encodeURIComponent(tenCongTy) + '::' + encodeURIComponent(soHopDong),
+                tenCongTy,
+                soHopDong,
+                source: 'Từ hóa đơn'
+            });
+        }
+    });
+
+    return Array.from(map.values()).sort((a, b) => {
+        let c = a.tenCongTy.localeCompare(b.tenCongTy, 'vi');
+        if(c !== 0) return c;
+        return a.soHopDong.localeCompare(b.soHopDong, 'vi', { numeric: true });
+    });
+}
+
+function findContractValueByCompanyAndNumberNT(companyName, soHopDong) {
+    let key = makeContractKeyNT(companyName, soHopDong);
+    let item = getCompanyContractsForNT().find(x => makeContractKeyNT(x.tenCongTy, x.soHopDong) === key);
+    return item ? item.value : '';
+}
+
+function parseSelectedContractNT(value) {
+    if(!value) return null;
+    if(value.startsWith('HD::')) {
+        let id = decodeURIComponent(value.replace('HD::', ''));
+        let hd = db.hopDongs.find(x => x.id === id);
+        if(!hd) return null;
+        return {
+            type: 'contract',
+            idHD: hd.id,
+            tenCongTy: hd.tenCongTy || '',
+            soHopDong: hd.soHopDong || ''
+        };
+    }
+    if(value.startsWith('INV::')) {
+        let parts = value.split('::');
+        return {
+            type: 'invoice',
+            idHD: '',
+            tenCongTy: decodeURIComponent(parts[1] || ''),
+            soHopDong: decodeURIComponent(parts[2] || '')
+        };
+    }
+
+    // Tương thích kiểu cũ: value chính là id hợp đồng
+    let hd = db.hopDongs.find(x => x.id === value);
+    return hd ? { type: 'contract', idHD: hd.id, tenCongTy: hd.tenCongTy || '', soHopDong: hd.soHopDong || '' } : null;
+}
+
+function getLatestBenBInfoNT(companyName) {
+    let normCty = normalizeTextNT(companyName);
+    if(!normCty) return null;
+
+    let candidates = getBBNTEntries()
+        .map(([id, r]) => r)
+        .filter(r => normalizeTextNT(r.tenBenB) === normCty)
+        .filter(r => r.diaChiB || r.sdtB || r.tkB || r.mstB || r.daiDienB || r.chucVuB || r.guq);
+
+    if(candidates.length === 0) return null;
+    candidates.sort((a, b) => {
+        let timeA = Date.parse(a.updatedAt || a.createdAt || a.ngayKy || '') || 0;
+        let timeB = Date.parse(b.updatedAt || b.createdAt || b.ngayKy || '') || 0;
+        return timeB - timeA;
+    });
+    return candidates[0];
+}
+
+function applyBenBInfoNT(info, forceOverwrite = false) {
+    if(!info) return false;
+    const map = {
+        inpDiaChiBNT: info.diaChiB,
+        inpSDTBNT: info.sdtB,
+        inpTKBNT: info.tkB,
+        inpMSTBNT: info.mstB,
+        inpDaiDienBNT: info.daiDienB,
+        inpChucVuBNT: info.chucVuB,
+        inpGUQNT: info.guq
+    };
+
+    let changed = false;
+    Object.entries(map).forEach(([id, value]) => {
+        let el = document.getElementById(id);
+        if(!el || value === undefined || value === null || value === '') return;
+        if(forceOverwrite || !el.value) {
+            el.value = value;
+            changed = true;
+        }
+    });
+    return changed;
+}
+
+function layLaiThongTinBenBNT(forceOverwrite = true) {
+    let tenCongTy = document.getElementById('inpTenBenBNT')?.value || '';
+    let info = getLatestBenBInfoNT(tenCongTy);
+    if(!info) return alert('Chưa tìm thấy thông tin Bên B đã lưu trước đây cho công ty này.');
+    applyBenBInfoNT(info, forceOverwrite);
+    updateDocNT();
+    alert('Đã lấy lại thông tin Bên B từ biên bản đã lưu trước đó.');
+}
+
+function loadDsHopDongNT() {
+    let html = '<option value="">-- Chọn Công ty / Hợp đồng --</option>';
+    let list = getCompanyContractsForNT();
+
+    list.forEach(item => {
+        let sourceLabel = item.source === 'Từ hóa đơn' ? ' • từ hóa đơn' : '';
+        html += `<option value="${item.value}">${escapeHtmlNT(item.tenCongTy)} - HĐ: ${escapeHtmlNT(item.soHopDong)}${sourceLabel}</option>`;
+    });
+
+    if(list.length === 0) html += '<option value="" disabled>Chưa có hợp đồng/số hợp đồng nào theo công ty</option>';
+
+    let select = document.getElementById('selectHopDongNT');
+    if(select) {
+        let oldValue = select.value;
+        select.innerHTML = html;
+        if(oldValue && Array.from(select.options).some(opt => opt.value === oldValue)) select.value = oldValue;
+        if(window.$ && $.fn.select2) {
+            try { $(select).trigger('change.select2'); } catch(e) {}
+        }
+    }
 }
 
 function autoFillContractNT() {
-    let idHD = document.getElementById('selectHopDongNT').value;
-    if(!idHD) return;
-    let hd = db.hopDongs.find(x => x.id === idHD);
-    if(hd) {
-        if(currentUser.role === 'admin') document.getElementById('inpTenBenBNT').value = hd.tenCongTy;
-        document.getElementById('inpSoHDNT').value = hd.soHopDong;
-        updateDocNT();
-    }
+    let selectValue = document.getElementById('selectHopDongNT')?.value;
+    let info = parseSelectedContractNT(selectValue);
+    if(!info) return;
+
+    let tenBenBEl = document.getElementById('inpTenBenBNT');
+    let oldTenBenB = tenBenBEl?.value || '';
+    let changedCompany = normalizeTextNT(oldTenBenB) !== normalizeTextNT(info.tenCongTy);
+
+    if(tenBenBEl) tenBenBEl.value = info.tenCongTy;
+    if(document.getElementById('inpSoHDNT')) document.getElementById('inpSoHDNT').value = info.soHopDong;
+
+    let latestBenB = getLatestBenBInfoNT(info.tenCongTy);
+    if(latestBenB) applyBenBInfoNT(latestBenB, changedCompany);
+
+    updateDocNT();
 }
 
 function updateDocNT() {
@@ -1131,119 +1338,285 @@ function renderTableDataNT() {
     if(document.getElementById('tongTienBangChuNT')) document.getElementById('tongTienBangChuNT').innerText = docTienBangChuNT(tong);
 }
 
+
+function escapeHtmlNT(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function normalizeTextNT(value) {
+    return String(value ?? '')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toUpperCase();
+}
+
+function getCurrentBBNTId() {
+    let el = document.getElementById('inpTenBBNT');
+    return currentBBNTId || el?.dataset?.recordId || null;
+}
+
+function setCurrentBBNTId(id) {
+    currentBBNTId = id || null;
+    let tenEl = document.getElementById('inpTenBBNT');
+    if(tenEl) {
+        tenEl.dataset.recordId = currentBBNTId || '';
+        if(!currentBBNTId) tenEl.dataset.legacyKey = '';
+    }
+    let idEl = document.getElementById('inpIdBBNT');
+    if(idEl) idEl.value = currentBBNTId || 'Tự sinh khi bấm lưu';
+}
+
+function getBBNTEntries() {
+    return Object.entries(nghiemThuDB || {})
+        .filter(([id, r]) => r && typeof r === 'object')
+        .map(([id, r]) => [r.id || id, { ...r, id: r.id || id }])
+        .sort((a, b) => {
+            let timeA = Date.parse(a[1].updatedAt || a[1].createdAt || a[1].ngayKy || '') || 0;
+            let timeB = Date.parse(b[1].updatedAt || b[1].createdAt || b[1].ngayKy || '') || 0;
+            return timeB - timeA;
+        });
+}
+
+function tinhTongTienBBNT(record) {
+    return (record?.excelData || []).reduce((sum, item) => sum + (Number(item.thanhTien) || 0), 0);
+}
+
+function findBBNTRecordByName(name) {
+    if(!name) return null;
+    let found = getBBNTEntries().find(([id, r]) => r.name === name);
+    return found ? { id: found[0], record: found[1] } : null;
+}
+
 function renderDanhSachBBNT() {
     let tbody = '';
-    let keys = Object.keys(nghiemThuDB).reverse(); 
-    keys.forEach(name => {
-        let r = nghiemThuDB[name];
+    let entries = getBBNTEntries();
+
+    entries.forEach(([id, r]) => {
         if(currentUser.role === 'user' && r.tenBenB !== currentUser.company) return;
 
-        let tongTien = r.excelData ? r.excelData.reduce((sum, item) => sum + item.thanhTien, 0) : 0;
+        let tongTien = tinhTongTienBBNT(r);
         let ngay = r.ngayKy ? formatDate(r.ngayKy) : '-';
-        
-        tbody += `<tr>
-            <td style="padding: 5px; border: 1px solid #bee5eb;"><strong>${r.soBBNT || '-'}</strong><br><span style="color:#666; font-size:10px;">${name}</span></td>
-            <td style="padding: 5px; border: 1px solid #bee5eb;">${r.tenBenB}<br><span style="color:#0056b3; font-size:10px;">HĐ: ${r.soHD || '-'}</span></td>
-            <td style="padding: 5px; border: 1px solid #bee5eb; text-align:center;">${ngay}</td>
-            <td style="padding: 5px; border: 1px solid #bee5eb; text-align:right; font-weight:bold; color:#dc3545;">${formatTien(tongTien)}</td>
-            <td style="padding: 5px; border: 1px solid #bee5eb; text-align:center; white-space:nowrap;">
-                <button onclick="nhanBanRecordNT('${name}')" style="background:#17a2b8; color:white; border:none; padding:4px 6px; border-radius:3px; cursor:pointer; font-weight:bold; margin-right:2px;" title="Nhân bản">📑 Copy</button>
-                <button onclick="loadRecordNT('${name}')" style="background:#ffc107; border:none; padding:4px 6px; border-radius:3px; cursor:pointer; font-weight:bold; margin-right:2px;" title="Sửa">Sửa</button>
-                <button onclick="xoaRecordNT('${name}')" style="background:#dc3545; color:white; border:none; padding:4px 6px; border-radius:3px; cursor:pointer; font-weight:bold;" title="Xóa">Xóa</button>
+        let tenBB = r.name || '(Chưa đặt tên)';
+        let benB = r.tenBenB || '-';
+        let soHD = r.soHD || '-';
+        let soBBNT = r.soBBNT || '-';
+        let shortId = String(id).length > 12 ? String(id).slice(-12) : id;
+        let isActive = getCurrentBBNTId() === id ? ' bbnt-active-row' : '';
+        let safeId = encodeURIComponent(id);
+
+        tbody += `<tr class="bbnt-row${isActive}">
+            <td class="bbnt-main-cell">
+                <div class="bbnt-title">${escapeHtmlNT(soBBNT)}</div>
+                <div class="bbnt-name">${escapeHtmlNT(tenBB)}</div>
+                <div class="bbnt-id">ID: ${escapeHtmlNT(shortId)}</div>
+            </td>
+            <td class="bbnt-partner-cell">
+                <div class="bbnt-company">${escapeHtmlNT(benB)}</div>
+                <div class="bbnt-contract">HĐ: ${escapeHtmlNT(soHD)}</div>
+            </td>
+            <td class="bbnt-date-cell">${escapeHtmlNT(ngay)}</td>
+            <td class="bbnt-money-cell">${formatTien(tongTien)}</td>
+            <td class="bbnt-action-cell">
+                <button class="bbnt-btn bbnt-btn-copy" onclick="nhanBanRecordNT('${safeId}')" title="Nhân bản biên bản">📑 Copy</button>
+                <button class="bbnt-btn bbnt-btn-edit" onclick="loadRecordNT('${safeId}')" title="Sửa biên bản">✏️ Sửa</button>
+                <button class="bbnt-btn bbnt-btn-delete" onclick="xoaRecordNT('${safeId}')" title="Xóa biên bản">🗑️ Xóa</button>
             </td>
         </tr>`;
     });
-    
-    if(tbody === '') tbody = `<tr><td colspan="5" style="text-align:center; padding:10px; font-style:italic;">Chưa có biên bản nào được tạo</td></tr>`;
+
+    if(tbody === '') tbody = `<tr><td colspan="5" class="bbnt-empty-row">Chưa có biên bản nào được tạo</td></tr>`;
     if(document.getElementById('dsBBNTBody')) document.getElementById('dsBBNTBody').innerHTML = tbody;
 }
 
-function saveRecordNT() {
+async function saveRecordNT() {
     let name = document.getElementById('inpTenBBNT').value.trim();
-    if(!name) return alert("Vui lòng đặt tên cho Biên Bản ở ô bên dưới (Ví dụ: BBNT_CPC1_Thang4) rồi mới bấm Lưu!");
+    if(!name) return alert("Vui lòng đặt tên hiển thị cho Biên bản nghiệm thu rồi mới bấm Lưu!");
 
-    // Loại bỏ mọi thuộc tính undefined trước khi push Firebase để tránh lỗi lưu
-    let cleanExcelData = JSON.parse(JSON.stringify(currentExcelDataNT)); 
+    let btn = (typeof event !== 'undefined') ? event.target : null;
+    if(btn) {
+        btn.disabled = true;
+        btn.dataset.oldText = btn.innerText;
+        btn.innerText = '⏳ Đang lưu...';
+    }
 
-    nghiemThuDB[name] = { 
-        name: name, soBBNT: document.getElementById('inpSoBBNT').value,
-        ngayKy: document.getElementById('inpNgayKyNT').value, soQD: document.getElementById('inpSoQDNT').value, 
-        donViQD: document.getElementById('inpDonViQDNT').value, noiDungQD: document.getElementById('inpNoiDungQDNT').value,
-        soHD: document.getElementById('inpSoHDNT').value, ngayHD: document.getElementById('inpNgayHDNT').value, 
-        phuLuc: document.getElementById('inpPhuLucNT').value, tenBenB: document.getElementById('inpTenBenBNT').value, 
-        diaChiB: document.getElementById('inpDiaChiBNT').value, sdtB: document.getElementById('inpSDTBNT').value, 
-        tkB: document.getElementById('inpTKBNT').value, mstB: document.getElementById('inpMSTBNT').value, 
-        daiDienB: document.getElementById('inpDaiDienBNT').value, chucVuB: document.getElementById('inpChucVuBNT').value, 
-        guq: document.getElementById('inpGUQNT').value, excelData: cleanExcelData 
-    };
-    
-    saveNghiemThu(); 
-    alert("Đã lưu biên bản lên máy chủ thành công!"); 
+    try {
+        let tenEl = document.getElementById('inpTenBBNT');
+        let legacyKey = tenEl?.dataset?.legacyKey || '';
+        let recordId = getCurrentBBNTId();
+        let isNewRecord = !recordId || !!legacyKey;
+        if(isNewRecord) recordId = database.ref('nghiemThuDB').push().key;
+
+        // Loại bỏ mọi thuộc tính undefined trước khi ghi Firebase để tránh lỗi lưu
+        let cleanExcelData = JSON.parse(JSON.stringify(currentExcelDataNT || []));
+        let oldRecord = legacyKey ? (nghiemThuDB[legacyKey] || {}) : (nghiemThuDB[recordId] || {});
+        let now = new Date().toISOString();
+
+        let record = {
+            id: recordId,
+            name: name,
+            soBBNT: document.getElementById('inpSoBBNT').value,
+            ngayKy: document.getElementById('inpNgayKyNT').value,
+            soQD: document.getElementById('inpSoQDNT').value,
+            donViQD: document.getElementById('inpDonViQDNT').value,
+            noiDungQD: document.getElementById('inpNoiDungQDNT').value,
+            soHD: document.getElementById('inpSoHDNT').value,
+            linkedContractValue: document.getElementById('selectHopDongNT')?.value || '',
+            ngayHD: document.getElementById('inpNgayHDNT').value,
+            phuLuc: document.getElementById('inpPhuLucNT').value,
+            tenBenB: document.getElementById('inpTenBenBNT').value,
+            diaChiB: document.getElementById('inpDiaChiBNT').value,
+            sdtB: document.getElementById('inpSDTBNT').value,
+            tkB: document.getElementById('inpTKBNT').value,
+            mstB: document.getElementById('inpMSTBNT').value,
+            daiDienB: document.getElementById('inpDaiDienBNT').value,
+            chucVuB: document.getElementById('inpChucVuBNT').value,
+            guq: document.getElementById('inpGUQNT').value,
+            excelData: cleanExcelData,
+            createdAt: oldRecord.createdAt || now,
+            updatedAt: now,
+            updatedBy: currentUser?.username || currentUser?.name || 'unknown'
+        };
+
+        await database.ref('nghiemThuDB/' + recordId).set(record);
+        if(legacyKey && legacyKey !== recordId) {
+            await database.ref('nghiemThuDB/' + legacyKey).remove();
+            delete nghiemThuDB[legacyKey];
+            if(tenEl) tenEl.dataset.legacyKey = '';
+        }
+        nghiemThuDB[recordId] = record;
+        setCurrentBBNTId(recordId);
+        renderDanhSachBBNT();
+        alert(isNewRecord ? "Đã tạo và lưu Biên bản nghiệm thu mới thành công!" : "Đã cập nhật Biên bản nghiệm thu thành công!");
+    } catch (error) {
+        console.error('Lỗi lưu BBNT:', error);
+        alert("Không lưu được Biên bản nghiệm thu. Lỗi Firebase: " + (error?.message || error));
+    } finally {
+        if(btn) {
+            btn.disabled = false;
+            btn.innerText = btn.dataset.oldText || '💾 LƯU BIÊN BẢN NÀY';
+        }
+    }
 }
 
-function loadRecordNT(name) {
-    let r = nghiemThuDB[name]; if(!r) return;
-    
-    if(document.getElementById('inpTenBBNT')) document.getElementById('inpTenBBNT').value = r.name || ''; 
-    if(document.getElementById('inpSoBBNT')) document.getElementById('inpSoBBNT').value = r.soBBNT || ''; 
-    if(document.getElementById('inpNgayKyNT')) document.getElementById('inpNgayKyNT').value = r.ngayKy || ''; 
-    if(document.getElementById('inpSoQDNT')) document.getElementById('inpSoQDNT').value = r.soQD || ''; 
+function loadRecordNT(id) {
+    id = decodeURIComponent(id);
+    let r = nghiemThuDB[id];
+    if(!r) return alert("Không tìm thấy dữ liệu biên bản này!");
+
+    setCurrentBBNTId(id);
+    let tenElLoad = document.getElementById('inpTenBBNT');
+    if(tenElLoad) {
+        tenElLoad.value = r.name || '';
+        tenElLoad.dataset.legacyKey = r.id ? '' : id;
+    }
+    if(document.getElementById('inpSoBBNT')) document.getElementById('inpSoBBNT').value = r.soBBNT || '';
+    if(document.getElementById('inpNgayKyNT')) document.getElementById('inpNgayKyNT').value = r.ngayKy || '';
+    if(document.getElementById('inpSoQDNT')) document.getElementById('inpSoQDNT').value = r.soQD || '';
     if(document.getElementById('inpDonViQDNT')) document.getElementById('inpDonViQDNT').value = r.donViQD || 'Trung tâm Y tế Huyện Hàm Thuận Bắc';
     if(document.getElementById('inpNoiDungQDNT')) document.getElementById('inpNoiDungQDNT').value = r.noiDungQD || 'về việc phê duyệt kết quả lựa chọn nhà thầu Gói thầu Mua sắm thuốc dược liệu, thuốc có thành phần dược liệu phối hợp với các dược chất hóa dược, thuốc cổ truyền';
-    if(document.getElementById('inpSoHDNT')) document.getElementById('inpSoHDNT').value = r.soHD || ''; 
-    if(document.getElementById('inpNgayHDNT')) document.getElementById('inpNgayHDNT').value = r.ngayHD || ''; 
-    if(document.getElementById('inpPhuLucNT')) document.getElementById('inpPhuLucNT').value = r.phuLuc || ''; 
-    if(document.getElementById('inpDiaChiBNT')) document.getElementById('inpDiaChiBNT').value = r.diaChiB || ''; 
-    if(document.getElementById('inpSDTBNT')) document.getElementById('inpSDTBNT').value = r.sdtB || ''; 
-    if(document.getElementById('inpTKBNT')) document.getElementById('inpTKBNT').value = r.tkB || ''; 
-    if(document.getElementById('inpMSTBNT')) document.getElementById('inpMSTBNT').value = r.mstB || ''; 
-    if(document.getElementById('inpDaiDienBNT')) document.getElementById('inpDaiDienBNT').value = r.daiDienB || ''; 
-    if(document.getElementById('inpChucVuBNT')) document.getElementById('inpChucVuBNT').value = r.chucVuB || ''; 
-    if(document.getElementById('inpGUQNT')) document.getElementById('inpGUQNT').value = r.guq || '';
-    if(currentUser.role === 'admin' && document.getElementById('inpTenBenBNT')) {
-        document.getElementById('inpTenBenBNT').value = r.tenBenB || '';
+    if(document.getElementById('inpSoHDNT')) document.getElementById('inpSoHDNT').value = r.soHD || '';
+    let selectHopDongLoad = document.getElementById('selectHopDongNT');
+    if(selectHopDongLoad) {
+        loadDsHopDongNT();
+        selectHopDongLoad.value = '';
+        let linkedValueToLoad = r.linkedContractValue || findContractValueByCompanyAndNumberNT(r.tenBenB || '', r.soHD || '');
+        if(linkedValueToLoad && Array.from(selectHopDongLoad.options).some(opt => opt.value === linkedValueToLoad)) {
+            selectHopDongLoad.value = linkedValueToLoad;
+        }
+        if(window.$ && $.fn.select2) {
+            try { $(selectHopDongLoad).trigger('change.select2'); } catch(e) {}
+        }
     }
-    
-    currentExcelDataNT = r.excelData || []; 
-    renderTableDataNT(); 
+    if(document.getElementById('inpNgayHDNT')) document.getElementById('inpNgayHDNT').value = r.ngayHD || '';
+    if(document.getElementById('inpPhuLucNT')) document.getElementById('inpPhuLucNT').value = r.phuLuc || '';
+    if(document.getElementById('inpDiaChiBNT')) document.getElementById('inpDiaChiBNT').value = r.diaChiB || '';
+    if(document.getElementById('inpSDTBNT')) document.getElementById('inpSDTBNT').value = r.sdtB || '';
+    if(document.getElementById('inpTKBNT')) document.getElementById('inpTKBNT').value = r.tkB || '';
+    if(document.getElementById('inpMSTBNT')) document.getElementById('inpMSTBNT').value = r.mstB || '';
+    if(document.getElementById('inpDaiDienBNT')) document.getElementById('inpDaiDienBNT').value = r.daiDienB || '';
+    if(document.getElementById('inpChucVuBNT')) document.getElementById('inpChucVuBNT').value = r.chucVuB || '';
+    if(document.getElementById('inpGUQNT')) document.getElementById('inpGUQNT').value = r.guq || '';
+    if(document.getElementById('inpTenBenBNT')) document.getElementById('inpTenBenBNT').value = r.tenBenB || '';
+
+    currentExcelDataNT = r.excelData || [];
+    renderTableDataNT();
     updateDocNT();
-    
+    renderDanhSachBBNT();
+
     alert("Đã tải dữ liệu BBNT lên khung chỉnh sửa! Vui lòng cuộn xuống để xem và sửa đổi.");
 }
 
-function xoaRecordNT(name) {
-    if(confirm(`Bạn có chắc chắn muốn XÓA biên bản: ${name} không?`)) {
-        delete nghiemThuDB[name];
-        saveNghiemThu();
-        lamMoiFormNT();
+async function xoaRecordNT(id) {
+    id = decodeURIComponent(id);
+    let r = nghiemThuDB[id];
+    if(!r) return alert("Không tìm thấy biên bản cần xóa!");
+
+    let ten = r.name || r.soBBNT || id;
+    if(confirm(`Bạn có chắc chắn muốn XÓA biên bản: ${ten} không?`)) {
+        try {
+            await database.ref('nghiemThuDB/' + id).remove();
+            delete nghiemThuDB[id];
+            if(getCurrentBBNTId() === id) lamMoiFormNT();
+            renderDanhSachBBNT();
+            alert("Đã xóa biên bản thành công!");
+        } catch (error) {
+            console.error('Lỗi xóa BBNT:', error);
+            alert("Không xóa được Biên bản nghiệm thu. Lỗi Firebase: " + (error?.message || error));
+        }
     }
 }
 
-function nhanBanRecordNT(name) {
-    let r = nghiemThuDB[name];
-    if(!r) return;
-    let newName = name + " (Copy " + Math.floor(Math.random() * 100) + ")";
-    let newRecord = JSON.parse(JSON.stringify(r)); 
-    newRecord.name = newName;
-    newRecord.soBBNT = ""; 
-    newRecord.ngayKy = ""; 
-    nghiemThuDB[newName] = newRecord;
-    
-    saveNghiemThu();
-    
-    setTimeout(() => {
-        loadRecordNT(newName);
+async function nhanBanRecordNT(id) {
+    id = decodeURIComponent(id);
+    let r = nghiemThuDB[id];
+    if(!r) return alert("Không tìm thấy biên bản để nhân bản!");
+
+    try {
+        let newId = database.ref('nghiemThuDB').push().key;
+        let now = new Date().toISOString();
+        let newRecord = JSON.parse(JSON.stringify(r));
+        newRecord.id = newId;
+        newRecord.name = (r.name || 'Biên bản') + " - Bản sao";
+        newRecord.soBBNT = "";
+        newRecord.ngayKy = "";
+        newRecord.createdAt = now;
+        newRecord.updatedAt = now;
+        newRecord.updatedBy = currentUser?.username || currentUser?.name || 'unknown';
+
+        await database.ref('nghiemThuDB/' + newId).set(newRecord);
+        nghiemThuDB[newId] = newRecord;
+        loadRecordNT(encodeURIComponent(newId));
         renderDanhSachBBNT();
-    }, 100);
+        alert("Đã nhân bản biên bản. Ông nhớ nhập lại Số BBNT và Ngày ký trước khi in/lưu chính thức nha.");
+    } catch (error) {
+        console.error('Lỗi nhân bản BBNT:', error);
+        alert("Không nhân bản được Biên bản nghiệm thu. Lỗi Firebase: " + (error?.message || error));
+    }
 }
 
 function lamMoiFormNT() {
-    document.querySelectorAll('.control-panel-nt input[type="text"]:not(#inpTenBenBNT):not(#inpSoQDNT):not(#inpDonViQDNT), .control-panel-nt input[type="date"]').forEach(el => el.value = ''); 
+    setCurrentBBNTId(null);
+    document.querySelectorAll('.control-panel-nt input[type="text"]:not(#inpIdBBNT):not(#inpTenBenBNT):not(#inpSoQDNT):not(#inpDonViQDNT), .control-panel-nt input[type="date"]').forEach(el => el.value = '');
+    if(document.getElementById('inpTenBBNT')) document.getElementById('inpTenBBNT').value = '';
+    if(document.getElementById('inpIdBBNT')) document.getElementById('inpIdBBNT').value = 'Tự sinh khi bấm lưu';
+    let selectHopDongMoi = document.getElementById('selectHopDongNT');
+    if(selectHopDongMoi) {
+        selectHopDongMoi.value = '';
+        if(window.$ && $.fn.select2) {
+            try { $(selectHopDongMoi).trigger('change.select2'); } catch(e) {}
+        }
+    }
     document.getElementById('inpDonViQDNT').value = 'Trung tâm Y tế Huyện Hàm Thuận Bắc';
     document.getElementById('inpNoiDungQDNT').value = 'về việc phê duyệt kết quả lựa chọn nhà thầu Gói thầu Mua sắm thuốc dược liệu, thuốc có thành phần dược liệu phối hợp với các dược chất hóa dược, thuốc cổ truyền';
-    currentExcelDataNT = []; 
-    renderTableDataNT(); 
+    currentExcelDataNT = [];
+    renderTableDataNT();
     updateDocNT();
+    renderDanhSachBBNT();
 }
 
 function inBienBanNghiemThu() {

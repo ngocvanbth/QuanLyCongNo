@@ -33,6 +33,7 @@
 <div class="no-print" style="background: #0056b3; color: white; padding: 10px 20px; text-align: right; font-weight: bold; font-family: Arial;">
     <span class="wave-hand" style="font-size: 16px;">👋</span> Xin chào, <span id="currentUserName" style="color: #ffc107;">...</span> |
     <span id="currentUserRole" style="font-size: 12px; font-weight: normal; margin-right: 15px;"></span>
+    <button onclick="hienThiThongBaoCapNhat(true)" style="background: #ffc107; color: #1f2937; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 5px;">📢 Cập nhật mới</button>
     <button onclick="hienThiModalDoiMatKhau(false)" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-right: 5px;">🔑 Đổi mật khẩu</button>
     <button onclick="dangXuat()" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold;">Đăng xuất</button>
 </div>
@@ -148,22 +149,28 @@
     <div id="tab-nghiem-thu" class="tab-content">
         <div class="nghiem-thu-layout">
             <div class="control-panel-nt">
-                <div class="save-box-nt" id="khuVucQuanLyBBNT" style="background:#d1ecf1; padding:10px; border-radius:5px; margin-bottom:15px;">
-                    <h4 style="margin:0 0 10px; color:#0c5460;">📂 Danh Sách Biên Bản Nghiệm Thu</h4>
-                    <div style="max-height: 200px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #bee5eb; background: white;">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 12px; font-family: Arial;">
-                            <thead style="background: #17a2b8; color: white; position: sticky; top: 0; z-index: 2;">
+                <div class="save-box-nt bbnt-list-panel" id="khuVucQuanLyBBNT">
+                    <div class="bbnt-list-header">
+                        <div>
+                            <h4>📂 Danh sách Biên bản nghiệm thu</h4>
+                            <small>ID do hệ thống tự sinh, tên biên bản chỉ dùng để dễ nhận biết.</small>
+                        </div>
+                    </div>
+                    <div class="bbnt-list-wrapper">
+                        <table class="bbnt-list-table">
+                            <thead>
                                 <tr>
-                                    <th style="padding: 5px; border: 1px solid #bee5eb;">Số BBNT / Tên</th>
-                                    <th style="padding: 5px; border: 1px solid #bee5eb;">Đối tác / HĐ</th>
-                                    <th style="padding: 5px; border: 1px solid #bee5eb;">Tổng tiền</th>
-                                    <th style="padding: 5px; border: 1px solid #bee5eb; width: 135px; text-align: center;">Thao tác</th>
+                                    <th>Biên bản</th>
+                                    <th>Đối tác / Hợp đồng</th>
+                                    <th>Ngày ký</th>
+                                    <th>Tổng tiền</th>
+                                    <th>Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody id="dsBBNTBody"></tbody>
                         </table>
                     </div>
-                    <button class="btn btn-warning" style="width: 100%; font-size: 13px; padding: 6px; font-weight: bold;" onclick="lamMoiFormNT()">+ TẠO BIÊN BẢN MỚI TỪ ĐẦU</button>
+                    <button class="btn btn-warning bbnt-new-btn" onclick="lamMoiFormNT()">+ TẠO BIÊN BẢN MỚI TỪ ĐẦU</button>
                 </div>
 
                 <div class="form-group-nt" id="khuVucCapNhatBenA" style="background:#fff3cd; padding:10px; border-radius:5px; margin-bottom:15px; display:none;">
@@ -188,9 +195,10 @@
                     </div>
                 </div>
 
-                <div class="form-group-nt" style="margin-top:10px;">
-                    <label style="color:#0056b3;">🔗 Liên kết Hợp đồng:</label>
+                <div class="form-group-nt bbnt-contract-link-box" style="margin-top:10px;">
+                    <label style="color:#0056b3;">🔗 Liên kết Công ty / Hợp đồng:</label>
                     <select id="selectHopDongNT" class="search-select" style="width:100%" onchange="autoFillContractNT()"></select>
+                    <small>Danh sách này lấy cả số hợp đồng trong danh mục Hợp đồng và số hợp đồng đã cập nhật trực tiếp tại từng hóa đơn.</small>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
@@ -199,7 +207,10 @@
                 </div>
                 <div class="form-group-nt" style="margin-top:10px;"><label>Phụ lục (Để trống nếu ko có):</label><input type="text" id="inpPhuLucNT" placeholder="VD: 01/PLHĐ ngày..." onkeyup="updateDocNT()"></div>
 
-                <h4 style="margin:15px 0 5px; color:#0056b3;">Thông tin Bên B</h4>
+                <div class="bbnt-benb-title-row">
+                    <h4>Thông tin Bên B</h4>
+                    <button type="button" onclick="layLaiThongTinBenBNT(true)">↩ Lấy lại thông tin đã lưu</button>
+                </div>
                 <div class="form-group-nt"><input type="text" id="inpTenBenBNT" placeholder="Tên Công ty" onkeyup="updateDocNT()"></div>
                 <div class="form-group-nt"><input type="text" id="inpDiaChiBNT" placeholder="Địa chỉ" onkeyup="updateDocNT()"></div>
                 <div class="form-group-nt"><input type="text" id="inpSDTBNT" placeholder="SĐT / Fax" onkeyup="updateDocNT()"></div>
@@ -218,10 +229,12 @@
                     <button class="btn" style="background:#28a745; color:white; margin-top:5px; width: 48%; display: inline-block; font-size:12px; padding:8px 8px; border-radius:3px; border:none; cursor:pointer;" onclick="taiMauExcelHoaDonNT()">📥 Tải File Mẫu</button>
                 </div>
 
-                <div class="form-group-nt" style="margin-top: 15px; background: #cce5ff; padding: 15px; border-radius: 5px;">
-                    <label>Tên Biên Bản để Lưu (Bắt buộc):</label>
+                <div class="form-group-nt bbnt-save-panel">
+                    <label>ID Biên bản nghiệm thu:</label>
+                    <input type="text" id="inpIdBBNT" value="Tự sinh khi bấm lưu" readonly>
+                    <label style="margin-top:8px;">Tên Biên bản để hiển thị (Bắt buộc):</label>
                     <input type="text" id="inpTenBBNT" placeholder="VD: BBNT_CPC1_Thang4">
-                    <button class="btn" style="width:100%; margin-top:10px;" onclick="saveRecordNT()">💾 LƯU BIÊN BẢN NÀY</button>
+                    <button class="btn bbnt-save-btn" onclick="saveRecordNT()">💾 LƯU BIÊN BẢN NÀY</button>
                 </div>
                 
                 <button class="btn btn-success" style="width:100%; margin-top:10px; font-size:16px;" onclick="inBienBanNghiemThu()">🖨️ IN BIÊN BẢN (A4)</button>
@@ -381,6 +394,29 @@
 </div>
 
 <div id="print-section"></div>
+
+<div id="modalCapNhatTinhNang" class="update-modal-overlay" style="display:none;">
+    <div class="update-modal-card">
+        <button class="update-modal-close" onclick="dongThongBaoCapNhat(true)" title="Đóng thông báo">×</button>
+        <div class="update-modal-topline">THÔNG BÁO CẬP NHẬT</div>
+        <h2>🚀 Tính năng mới đã được bổ sung</h2>
+        <div class="update-version-badge">Phiên bản cập nhật: BBNT-ID-HD-20260622</div>
+        <p class="update-modal-intro">Bản cập nhật này sửa sâu phần lưu Biên bản nghiệm thu, bổ sung liên kết số hợp đồng theo từng công ty và tự lấy lại thông tin Bên B đã từng nhập.</p>
+        <div class="update-feature-list">
+            <div class="update-feature-item"><span>✅</span><div><b>ID Biên bản nghiệm thu tự sinh</b><small>Hệ thống tự tạo ID làm khóa chính trên Firebase; tên biên bản chỉ còn dùng để hiển thị.</small></div></div>
+            <div class="update-feature-item"><span>🔒</span><div><b>Lưu dữ liệu an toàn hơn</b><small>Mỗi biên bản được lưu/cập nhật/xóa riêng theo ID, hạn chế lỗi ghi đè dữ liệu.</small></div></div>
+            <div class="update-feature-item"><span>📂</span><div><b>Danh sách BBNT dễ nhìn hơn</b><small>Bổ sung thông tin biên bản, đối tác/hợp đồng, ngày ký, tổng tiền và nút thao tác rõ ràng.</small></div></div>
+            <div class="update-feature-item"><span>🔗</span><div><b>Liên kết hợp đồng theo công ty</b><small>Khi làm BBNT, danh sách liên kết lấy cả số hợp đồng trong danh mục và số hợp đồng đã cập nhật trực tiếp ở hóa đơn.</small></div></div>
+            <div class="update-feature-item"><span>🏢</span><div><b>Tự lấy lại thông tin Bên B</b><small>Khi chọn công ty/hợp đồng, hệ thống dò biên bản đã lưu trước đó để điền lại địa chỉ, MST, tài khoản, đại diện, chức vụ...</small></div></div>
+            <div class="update-feature-item"><span>🔁</span><div><b>Tương thích dữ liệu cũ</b><small>Biên bản đã lưu theo kiểu cũ vẫn mở được; khi lưu lại sẽ chuyển dần sang chuẩn ID mới.</small></div></div>
+            <div class="update-feature-item"><span>🧩</span><div><b>Giữ nguyên các chức năng cũ</b><small>Không thay đổi nghiệp vụ hóa đơn, hợp đồng, đối chiếu công nợ, in, xuất Word/Excel/PDF.</small></div></div>
+        </div>
+        <div class="update-modal-actions">
+            <button class="update-btn-secondary" onclick="dongThongBaoCapNhat(false)">Nhắc lại lần sau</button>
+            <button class="update-btn-primary" onclick="dongThongBaoCapNhat(true)">Đã hiểu</button>
+        </div>
+    </div>
+</div>
 
 <div id="modalDoiMatKhau" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; justify-content:center; align-items:center;">
     <div style="background:white; padding:25px; border-radius:8px; width:350px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">

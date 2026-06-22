@@ -189,3 +189,461 @@ tbody tr:hover {
         background-position: 200% center;
     }
 }
+/* =========================================
+   GIAO DIỆN DANH SÁCH BIÊN BẢN NGHIỆM THU
+   ========================================= */
+.bbnt-list-panel {
+    background: linear-gradient(135deg, #eef9ff 0%, #ffffff 100%);
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #b9e3f0;
+    box-shadow: 0 4px 14px rgba(0, 86, 179, 0.08);
+}
+
+.bbnt-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    gap: 10px;
+}
+
+.bbnt-list-header h4 {
+    margin: 0;
+    color: #074b72;
+    font-size: 15px;
+    line-height: 1.2;
+}
+
+.bbnt-list-header small {
+    display: block;
+    margin-top: 4px;
+    color: #5a6b75;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.bbnt-list-wrapper {
+    max-height: 260px;
+    overflow: auto;
+    border: 1px solid #c7e6f1;
+    background: #fff;
+    border-radius: 10px;
+}
+
+.bbnt-list-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+    margin-top: 0;
+}
+
+.bbnt-list-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #0b6f91;
+    color: #fff;
+    padding: 8px 7px;
+    border: none;
+    white-space: nowrap;
+    font-size: 11px;
+    text-align: left;
+}
+
+.bbnt-list-table th:nth-child(3),
+.bbnt-list-table th:nth-child(4),
+.bbnt-list-table th:nth-child(5) {
+    text-align: center;
+}
+
+.bbnt-list-table td {
+    border: none;
+    border-bottom: 1px solid #edf3f6;
+    padding: 8px 7px;
+    vertical-align: middle;
+}
+
+.bbnt-row {
+    background: #fff;
+}
+
+.bbnt-row:nth-child(even) {
+    background: #f8fcff;
+}
+
+.bbnt-active-row {
+    background: #fff8df !important;
+    outline: 2px solid #f0c24b;
+    outline-offset: -2px;
+}
+
+.bbnt-main-cell {
+    min-width: 150px;
+}
+
+.bbnt-title {
+    font-weight: 800;
+    color: #083c5a;
+    font-size: 13px;
+}
+
+.bbnt-name {
+    color: #334155;
+    font-size: 11px;
+    margin-top: 3px;
+    max-width: 170px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bbnt-id {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #eef6f9;
+    color: #60727c;
+    font-size: 10px;
+    font-family: Consolas, monospace;
+}
+
+.bbnt-company {
+    font-weight: 700;
+    color: #243447;
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bbnt-contract {
+    margin-top: 4px;
+    color: #0b6f91;
+    font-size: 11px;
+}
+
+.bbnt-date-cell {
+    color: #334155;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.bbnt-money-cell {
+    text-align: right;
+    font-weight: 800;
+    color: #c82333;
+    white-space: nowrap;
+}
+
+.bbnt-action-cell {
+    text-align: center;
+    white-space: nowrap;
+    min-width: 160px;
+}
+
+.bbnt-btn {
+    border: none;
+    padding: 5px 7px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 11px;
+    margin: 2px;
+    transition: all 0.2s ease;
+}
+
+.bbnt-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.14);
+}
+
+.bbnt-btn-copy {
+    background: #17a2b8;
+    color: #fff;
+}
+
+.bbnt-btn-edit {
+    background: #ffc107;
+    color: #2b2b2b;
+}
+
+.bbnt-btn-delete {
+    background: #dc3545;
+    color: #fff;
+}
+
+.bbnt-empty-row {
+    text-align: center;
+    padding: 16px !important;
+    font-style: italic;
+    color: #6c757d;
+}
+
+.bbnt-new-btn {
+    width: 100%;
+    font-size: 13px;
+    padding: 8px;
+    font-weight: bold;
+    margin-top: 10px;
+    border-radius: 8px;
+}
+
+.bbnt-save-panel {
+    margin-top: 15px;
+    background: linear-gradient(135deg, #dbeeff 0%, #f6fbff 100%);
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid #a9d2ff;
+}
+
+.bbnt-save-panel #inpIdBBNT {
+    background: #eef3f7;
+    color: #5f6c72;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    cursor: not-allowed;
+}
+
+.bbnt-save-btn {
+    width: 100%;
+    margin-top: 10px;
+    border-radius: 8px;
+}
+
+.bbnt-save-btn:disabled,
+.bbnt-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+
+/* ===== THÔNG BÁO CẬP NHẬT TÍNH NĂNG ===== */
+.update-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 18, 31, 0.72);
+    backdrop-filter: blur(5px);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    padding: 18px;
+    box-sizing: border-box;
+}
+
+.update-modal-card {
+    position: relative;
+    width: min(620px, 96vw);
+    max-height: 92vh;
+    overflow-y: auto;
+    background: linear-gradient(145deg, #ffffff 0%, #f2f8ff 100%);
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.72);
+    box-shadow: 0 22px 60px rgba(0,0,0,0.30);
+    padding: 26px;
+    font-family: Arial, sans-serif;
+    animation: updateModalPop 0.25s ease-out;
+}
+
+@keyframes updateModalPop {
+    from { transform: translateY(12px) scale(0.98); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.update-modal-close {
+    position: absolute;
+    right: 15px;
+    top: 12px;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: #eef4fb;
+    color: #334155;
+    font-size: 24px;
+    line-height: 28px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.update-modal-close:hover {
+    background: #dbeafe;
+}
+
+.update-modal-topline {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #0b5cab;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.update-modal-card h2 {
+    margin: 4px 38px 8px 0;
+    color: #082f49;
+    font-size: 24px;
+}
+
+.update-version-badge {
+    display: inline-block;
+    background: #0b6f91;
+    color: #fff;
+    padding: 7px 11px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+.update-modal-intro {
+    margin: 8px 0 16px;
+    color: #475569;
+    line-height: 1.5;
+}
+
+.update-feature-list {
+    display: grid;
+    gap: 10px;
+}
+
+.update-feature-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: #ffffff;
+    border: 1px solid #e2edf7;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.update-feature-item > span {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f8ff;
+    border-radius: 10px;
+    flex: 0 0 30px;
+}
+
+.update-feature-item b {
+    display: block;
+    color: #0f172a;
+    font-size: 14px;
+    margin-bottom: 3px;
+}
+
+.update-feature-item small {
+    display: block;
+    color: #64748b;
+    font-size: 12.5px;
+    line-height: 1.45;
+}
+
+.update-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 18px;
+}
+
+.update-btn-primary,
+.update-btn-secondary {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.update-btn-primary {
+    background: #0b6f91;
+    color: white;
+}
+
+.update-btn-primary:hover {
+    background: #075b78;
+}
+
+.update-btn-secondary {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.update-btn-secondary:hover {
+    background: #cbd5e1;
+}
+
+@media (max-width: 640px) {
+    .update-modal-card {
+        padding: 20px;
+    }
+    .update-modal-card h2 {
+        font-size: 20px;
+    }
+    .update-modal-actions {
+        flex-direction: column-reverse;
+    }
+    .update-btn-primary,
+    .update-btn-secondary {
+        width: 100%;
+    }
+}
+
+/* ===== LIÊN KẾT HỢP ĐỒNG + LẤY LẠI THÔNG TIN BÊN B ===== */
+.bbnt-contract-link-box {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
+    border: 1px dashed #f59e0b;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.bbnt-contract-link-box small {
+    display: block;
+    margin-top: 6px;
+    color: #7c4a03;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.bbnt-benb-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 15px 0 7px;
+}
+
+.bbnt-benb-title-row h4 {
+    margin: 0;
+    color: #0056b3;
+}
+
+.bbnt-benb-title-row button {
+    border: none;
+    background: #e0f2fe;
+    color: #075985;
+    border-radius: 999px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.bbnt-benb-title-row button:hover {
+    background: #bae6fd;
+}
