@@ -372,15 +372,15 @@
         </div>
 
         <div class="form-box" style="border-left: 4px solid #dc3545; margin-top: 20px;">
-            <h3 style="color: #dc3545;">🗑️ Quản lý & Xóa Hợp Đồng / Tên Công Ty (Chỉ Admin)</h3>
-            <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Dùng để dọn dẹp các tên công ty hoặc hợp đồng lỡ nhập sai trong quá trình thao tác.</p>
+            <h3 style="color: #dc3545;">🛠️ Quản lý Hợp Đồng / Tên Công Ty (Chỉ Admin)</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 10px;">Dùng để sửa tên công ty khi nhà thầu thay đổi tên, đồng bộ lại hóa đơn cũ/BBNT/tài khoản đối tác hoặc xóa hợp đồng nhập sai.</p>
             <table style="font-size: 13px;">
                 <thead>
                     <tr>
                         <th>Tên Công ty</th>
                         <th>Số Hợp Đồng</th>
                         <th>Giá trị gốc</th>
-                        <th style="width: 60px;">Thao tác</th>
+                        <th style="width: 160px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody id="bangAdminHopDong"></tbody>
@@ -400,14 +400,15 @@
         <button class="update-modal-close" onclick="dongThongBaoCapNhat(true)" title="Đóng thông báo">×</button>
         <div class="update-modal-topline">THÔNG BÁO CẬP NHẬT</div>
         <h2>🚀 Tính năng mới đã được bổ sung</h2>
-        <div class="update-version-badge">Phiên bản cập nhật: BBNT-ID-HD-20260622</div>
-        <p class="update-modal-intro">Bản cập nhật này sửa sâu phần lưu Biên bản nghiệm thu, bổ sung liên kết số hợp đồng theo từng công ty và tự lấy lại thông tin Bên B đã từng nhập.</p>
+        <div class="update-version-badge">Phiên bản cập nhật: BBNT-ID-HD-DOITEN-20260622</div>
+        <p class="update-modal-intro">Bản cập nhật này sửa sâu phần lưu Biên bản nghiệm thu, bổ sung liên kết số hợp đồng theo từng công ty, tự lấy lại thông tin Bên B và cho phép Admin đổi tên công ty khi nhà thầu có văn bản thay đổi tên.</p>
         <div class="update-feature-list">
             <div class="update-feature-item"><span>✅</span><div><b>ID Biên bản nghiệm thu tự sinh</b><small>Hệ thống tự tạo ID làm khóa chính trên Firebase; tên biên bản chỉ còn dùng để hiển thị.</small></div></div>
             <div class="update-feature-item"><span>🔒</span><div><b>Lưu dữ liệu an toàn hơn</b><small>Mỗi biên bản được lưu/cập nhật/xóa riêng theo ID, hạn chế lỗi ghi đè dữ liệu.</small></div></div>
             <div class="update-feature-item"><span>📂</span><div><b>Danh sách BBNT dễ nhìn hơn</b><small>Bổ sung thông tin biên bản, đối tác/hợp đồng, ngày ký, tổng tiền và nút thao tác rõ ràng.</small></div></div>
             <div class="update-feature-item"><span>🔗</span><div><b>Liên kết hợp đồng theo công ty</b><small>Khi làm BBNT, danh sách liên kết lấy cả số hợp đồng trong danh mục và số hợp đồng đã cập nhật trực tiếp ở hóa đơn.</small></div></div>
             <div class="update-feature-item"><span>🏢</span><div><b>Tự lấy lại thông tin Bên B</b><small>Khi chọn công ty/hợp đồng, hệ thống dò biên bản đã lưu trước đó để điền lại địa chỉ, MST, tài khoản, đại diện, chức vụ...</small></div></div>
+            <div class="update-feature-item"><span>✏️</span><div><b>Sửa tên công ty đồng bộ</b><small>Admin có thể đổi tên công ty và hệ thống cập nhật đồng thời Hợp đồng, Hóa đơn cũ, tài khoản đối tác và BBNT liên quan.</small></div></div>
             <div class="update-feature-item"><span>🔁</span><div><b>Tương thích dữ liệu cũ</b><small>Biên bản đã lưu theo kiểu cũ vẫn mở được; khi lưu lại sẽ chuyển dần sang chuẩn ID mới.</small></div></div>
             <div class="update-feature-item"><span>🧩</span><div><b>Giữ nguyên các chức năng cũ</b><small>Không thay đổi nghiệp vụ hóa đơn, hợp đồng, đối chiếu công nợ, in, xuất Word/Excel/PDF.</small></div></div>
         </div>

@@ -12,7 +12,7 @@ let nghiemThuDB = {};
 let currentExcelDataNT = [];
 let currentBBNTId = null;
 
-const APP_UPDATE_NOTICE_KEY = 'congnohtb_update_seen_BBNT_ID_HD_BENB_20260622';
+const APP_UPDATE_NOTICE_KEY = 'congnohtb_update_seen_BBNT_ID_HD_BENB_RENAME_20260622';
 
 function hienThiThongBaoCapNhat(forceShow = false) {
     const modal = document.getElementById('modalCapNhatTinhNang');
@@ -298,15 +298,114 @@ function renderBangAdminHopDong() {
     if(!document.getElementById('bangAdminHopDong')) return;
     let html = '';
     db.hopDongs.forEach(hd => {
+        let safeId = escapeHtmlNT(hd.id || '');
         html += `<tr>
-            <td><strong>${hd.tenCongTy}</strong></td>
-            <td>${hd.soHopDong}</td>
-            <td class="text-right">${formatTien(hd.giaTriGoc)}</td>
-            <td class="text-center"><button onclick="xoaHopDong('${hd.id}')" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:11px;" title="Xóa Công ty/Hợp đồng này">❌ Xóa</button></td>
+            <td><strong>${escapeHtmlNT(hd.tenCongTy || '')}</strong></td>
+            <td>${escapeHtmlNT(hd.soHopDong || '')}</td>
+            <td class="text-right">${formatTien(Number(hd.giaTriGoc) || 0)}</td>
+            <td class="text-center" style="white-space:nowrap;">
+                <button onclick="suaTenCongTy('${safeId}')" style="background:#ffc107; color:#111827; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:11px; font-weight:bold; margin-right:4px;" title="Đổi tên công ty và cập nhật toàn bộ hóa đơn cũ">✏️ Sửa tên</button>
+                <button onclick="xoaHopDong('${safeId}')" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:11px;" title="Xóa Công ty/Hợp đồng này">❌ Xóa</button>
+            </td>
         </tr>`;
     });
     if(db.hopDongs.length === 0) html = `<tr><td colspan="4" class="text-center" style="font-style:italic;">Chưa có dữ liệu</td></tr>`;
     document.getElementById('bangAdminHopDong').innerHTML = html;
+}
+
+function capNhatLinkedContractValueSauDoiTenCongTy(value, oldName, newName) {
+    if(!value || typeof value !== 'string' || !value.startsWith('INV::')) return value;
+    let parts = value.split('::');
+    if(parts.length < 3) return value;
+    let companyInValue = '';
+    try { companyInValue = decodeURIComponent(parts[1] || ''); } catch(e) { companyInValue = parts[1] || ''; }
+    if(normalizeTextNT(companyInValue) !== normalizeTextNT(oldName)) return value;
+    return 'INV::' + encodeURIComponent(newName) + '::' + (parts[2] || '');
+}
+
+async function suaTenCongTy(id) {
+    if(currentUser.role !== 'admin') return alert('Chỉ tài khoản Admin mới được sửa tên công ty!');
+    let hdGoc = db.hopDongs.find(h => h.id === id);
+    if(!hdGoc) return alert('Không tìm thấy công ty/hợp đồng cần sửa!');
+
+    let oldName = (hdGoc.tenCongTy || '').trim();
+    if(!oldName) return alert('Tên công ty cũ đang trống, không thể sửa tự động!');
+
+    let newName = prompt(
+        'Nhập TÊN CÔNG TY MỚI để cập nhật toàn bộ dữ liệu cũ:\n\n' +
+        'Tên hiện tại: ' + oldName + '\n\n' +
+        'Lưu ý: hệ thống sẽ đổi tên trong Hợp đồng, Hóa đơn, tài khoản đối tác và Biên bản nghiệm thu đã lưu.',
+        oldName
+    );
+
+    if(newName === null) return;
+    newName = newName.trim().replace(/\s+/g, ' ');
+    if(!newName) return alert('Tên công ty mới không được để trống!');
+    if(normalizeTextNT(newName) === normalizeTextNT(oldName)) return alert('Tên mới giống tên cũ, không có gì để cập nhật.');
+
+    let trungTen = db.hopDongs.some(h => normalizeTextNT(h.tenCongTy) === normalizeTextNT(newName));
+    let cauHoiGop = trungTen
+        ? '\n\n⚠️ Tên công ty mới đã tồn tại trong hệ thống. Nếu tiếp tục, dữ liệu sẽ được GỘP vào tên công ty này.'
+        : '';
+
+    let soHopDong = db.hopDongs.filter(h => normalizeTextNT(h.tenCongTy) === normalizeTextNT(oldName)).length;
+    let soHoaDon = db.hoaDons.filter(h => normalizeTextNT(h.tenCongTy) === normalizeTextNT(oldName)).length;
+    let soTaiKhoan = Object.values(usersDB || {}).filter(u => normalizeTextNT(u.company) === normalizeTextNT(oldName)).length;
+    let dsBBNT = Object.keys(nghiemThuDB || {}).filter(k => normalizeTextNT(nghiemThuDB[k]?.tenBenB) === normalizeTextNT(oldName));
+
+    let msg = `Xác nhận đổi tên công ty?\n\nTỪ: ${oldName}\nSANG: ${newName}\n\nSẽ cập nhật:\n- ${soHopDong} hợp đồng/dòng công ty\n- ${soHoaDon} hóa đơn cũ\n- ${soTaiKhoan} tài khoản đối tác\n- ${dsBBNT.length} biên bản nghiệm thu đã lưu${cauHoiGop}\n\nNên sao lưu dữ liệu trước khi thực hiện. Tiếp tục?`;
+    if(!confirm(msg)) return;
+
+    let btns = document.querySelectorAll('button');
+    btns.forEach(b => { if(b.textContent.includes('Sửa tên')) b.disabled = true; });
+
+    try {
+        db.hopDongs.forEach(h => {
+            if(normalizeTextNT(h.tenCongTy) === normalizeTextNT(oldName)) h.tenCongTy = newName;
+        });
+        db.hoaDons.forEach(h => {
+            if(normalizeTextNT(h.tenCongTy) === normalizeTextNT(oldName)) h.tenCongTy = newName;
+        });
+
+        Object.keys(usersDB || {}).forEach(username => {
+            if(normalizeTextNT(usersDB[username]?.company) === normalizeTextNT(oldName)) {
+                usersDB[username].company = newName;
+            }
+        });
+
+        Object.keys(nghiemThuDB || {}).forEach(key => {
+            let r = nghiemThuDB[key];
+            if(!r) return;
+            if(normalizeTextNT(r.tenBenB) === normalizeTextNT(oldName)) r.tenBenB = newName;
+            if(r.linkedContractValue) r.linkedContractValue = capNhatLinkedContractValueSauDoiTenCongTy(r.linkedContractValue, oldName, newName);
+            r.updatedAt = new Date().toISOString();
+            r.updatedBy = currentUser?.username || '';
+        });
+
+        await Promise.all([
+            database.ref('congNoDB').set(db),
+            database.ref('usersDB').set(usersDB),
+            database.ref('nghiemThuDB').set(nghiemThuDB)
+        ]);
+
+        if(currentUser && normalizeTextNT(currentUser.company) === normalizeTextNT(oldName)) {
+            currentUser.company = newName;
+            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+
+        loadSelectOptions();
+        loadDsHopDongNT();
+        renderTable();
+        renderBangAdminHopDong();
+        renderDanhSachBBNT();
+
+        alert(`✅ Đã đổi tên công ty thành công!\n\n${oldName}\n→ ${newName}\n\nCác hóa đơn cũ, hợp đồng, tài khoản đối tác và BBNT liên quan đã được cập nhật.`);
+    } catch(err) {
+        console.error(err);
+        alert('❌ Lỗi khi cập nhật tên công ty trên Firebase: ' + (err?.message || err));
+    } finally {
+        btns.forEach(b => { if(b.textContent.includes('Sửa tên')) b.disabled = false; });
+    }
 }
 
 function xoaHopDong(id) {
