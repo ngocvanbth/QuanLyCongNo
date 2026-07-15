@@ -200,6 +200,14 @@ $(document).ready(function() {
 
     $('#selectCongTyTT').on('change', loadHopDongVaHoaDonTT);
     $('#selectCongTyTT').on('select2:select', loadHopDongVaHoaDonTT);
+
+    // Chỉ định dạng ô Số tiền tại tab Hóa đơn khi người dùng đang nhập.
+    const tienHoaDonInput = document.getElementById('tienHoaDon');
+    if(tienHoaDonInput) {
+        tienHoaDonInput.addEventListener('input', function() {
+            dinhDangTienHoaDonKhiNhap(this);
+        });
+    }
 });
 
 function toggleCompanySelect() {
@@ -439,6 +447,37 @@ function xoaHoaDon(id) {
 // ==========================================
 const formatTien = (tien) => new Intl.NumberFormat('vi-VN').format(tien);
 
+function dinhDangTienHoaDonKhiNhap(input) {
+    const giaTriCu = input.value;
+    const viTriConTroCu = input.selectionStart ?? giaTriCu.length;
+    const soChuSoBenPhai = giaTriCu.slice(viTriConTroCu).replace(/\D/g, '').length;
+    const chuSo = giaTriCu.replace(/\D/g, '');
+
+    input.value = chuSo ? new Intl.NumberFormat('vi-VN').format(Number(chuSo)) : '';
+
+    // Giữ con trỏ đúng vị trí khi chèn hoặc xóa số ở giữa chuỗi.
+    let viTriMoi = input.value.length;
+    if(soChuSoBenPhai > 0) {
+        let demChuSo = 0;
+        for(let i = input.value.length - 1; i >= 0; i--) {
+            if(/\d/.test(input.value[i])) demChuSo++;
+            if(demChuSo === soChuSoBenPhai) {
+                viTriMoi = i;
+                while(viTriMoi > 0 && /\D/.test(input.value[viTriMoi - 1])) viTriMoi--;
+                break;
+            }
+        }
+    }
+
+    requestAnimationFrame(() => input.setSelectionRange(viTriMoi, viTriMoi));
+}
+
+function laySoTienHoaDon() {
+    const input = document.getElementById('tienHoaDon');
+    const chuSo = input ? input.value.replace(/\D/g, '') : '';
+    return chuSo ? Number(chuSo) : 0;
+}
+
 function formatDate(dateString) {
     if(!dateString) return '';
     const parts = dateString.split('-');
@@ -480,7 +519,7 @@ function themHoaDon() {
     let soHD = document.getElementById('soHoaDonInput').value;
     let ngayHD = document.getElementById('ngayHoaDon').value;
     let ngayNK = document.getElementById('ngayNhapKho').value;
-    let tien = Number(document.getElementById('tienHoaDon').value);
+    let tien = laySoTienHoaDon();
     let gc = document.getElementById('ghiChuHoaDon').value.trim();
     
     if(!tenCty || !soHD || !tien) return alert("Vui lòng chọn Công ty, nhập Số hóa đơn và Số tiền!");
